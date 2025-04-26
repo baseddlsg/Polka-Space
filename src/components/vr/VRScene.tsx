@@ -2,7 +2,7 @@
 import React, { Suspense, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment, PerspectiveCamera } from "@react-three/drei";
-import { Vector3 } from "three";
+import { Vector3, Mesh } from "three";
 
 interface BoxProps {
   position: [number, number, number];
@@ -11,7 +11,7 @@ interface BoxProps {
 }
 
 const Box: React.FC<BoxProps> = ({ position, color, scale = [1, 1, 1] }) => {
-  const mesh = useRef<THREE.Mesh>(null!);
+  const mesh = useRef<Mesh>(null!);
   
   useFrame(() => {
     mesh.current.rotation.x += 0.005;
