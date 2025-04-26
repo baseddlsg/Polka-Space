@@ -1,28 +1,18 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { web3Accounts, web3Enable } from "@polkadot/extension-dapp";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { useWallet } from "@/contexts/WalletContext";
 
-interface Account {
-  address: string;
-  meta: {
-    name?: string;
-    source: string;
-  };
-}
-
-const WalletConnect: React.FC = () => {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+const WalletConnect = () => {
+  const { selectedAccount, setSelectedAccount } = useWallet();
   const [isConnecting, setIsConnecting] = useState(false);
 
   const connectWallet = async () => {
     setIsConnecting(true);
     
     try {
-      // Enable the extension
       const extensions = await web3Enable('VR Genesis Frame');
       
       if (extensions.length === 0) {
@@ -32,7 +22,6 @@ const WalletConnect: React.FC = () => {
         return;
       }
       
-      // Get all accounts
       const allAccounts = await web3Accounts();
       
       if (allAccounts.length === 0) {
@@ -42,8 +31,6 @@ const WalletConnect: React.FC = () => {
         return;
       }
       
-      setAccounts(allAccounts);
-      // Auto-select the first account
       setSelectedAccount(allAccounts[0]);
       
       toast.success("Wallet connected", {

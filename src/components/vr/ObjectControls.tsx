@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -6,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { toast } from "sonner";
+import { useWallet } from "@/contexts/WalletContext";
 
 const SHAPES = ["Box", "Sphere", "Cylinder", "Torus"];
 const COLORS = [
@@ -16,7 +17,8 @@ const COLORS = [
   { name: "Orange", value: "#F97316" },
 ];
 
-const ObjectControls: React.FC = () => {
+const ObjectControls = () => {
+  const { selectedAccount } = useWallet();
   const [selectedShape, setSelectedShape] = useState("Box");
   const [selectedColor, setSelectedColor] = useState("#8B5CF6");
   const [scale, setScale] = useState(1);
@@ -27,8 +29,20 @@ const ObjectControls: React.FC = () => {
   };
   
   const handleMintNFT = () => {
+    if (!selectedAccount) {
+      toast.error("Wallet not connected", {
+        description: "Please connect your wallet to mint NFTs"
+      });
+      return;
+    }
+    
     // This would trigger the NFT minting process
-    console.log("Minting as NFT:", { shape: selectedShape, color: selectedColor, scale });
+    console.log("Minting as NFT:", { 
+      shape: selectedShape, 
+      color: selectedColor, 
+      scale,
+      address: selectedAccount.address 
+    });
   };
 
   return (
