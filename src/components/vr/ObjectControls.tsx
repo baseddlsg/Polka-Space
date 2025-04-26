@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { useWallet } from "@/contexts/WalletContext";
+import { mintNFT } from "@/services/mintingService";
 
 const SHAPES = ["Box", "Sphere", "Cylinder", "Torus"];
 const COLORS = [
@@ -22,27 +23,42 @@ const ObjectControls = () => {
   const [selectedShape, setSelectedShape] = useState("Box");
   const [selectedColor, setSelectedColor] = useState("#8B5CF6");
   const [scale, setScale] = useState(1);
+  const [isMinting, setIsMinting] = useState(false);
   
   const handleCreateObject = () => {
-    // In a real app, this would create the object in the VR scene
     console.log("Creating object:", { shape: selectedShape, color: selectedColor, scale });
   };
   
-  const handleMintNFT = () => {
+  const handleMintNFT = async () => {
     if (!selectedAccount) {
       toast.error("Wallet not connected", {
         description: "Please connect your wallet to mint NFTs"
       });
       return;
     }
+
+    setIsMinting(true);
     
-    // This would trigger the NFT minting process
-    console.log("Minting as NFT:", { 
-      shape: selectedShape, 
-      color: selectedColor, 
-      scale,
-      address: selectedAccount.address 
-    });
+    try {
+      const response = await mintNFT({
+        ownerAddress: selectedAccount.address,
+        objectDetails: {
+          shape: selectedShape,
+          color: selectedColor,
+          scale: scale,
+        }
+      });
+
+      toast.success("NFT Minted Successfully", {
+        description: `Transaction Hash: ${response.transactionHash.slice(0, 10)}...`,
+      });
+    } catch (error) {
+      toast.error("Failed to mint NFT", {
+        description: error instanceof Error ? error.message : "Please try again later"
+      });
+    } finally {
+      setIsMinting(false);
+    }
   };
 
   return (
@@ -114,14 +130,16 @@ const ObjectControls = () => {
           variant="outline" 
           onClick={handleCreateObject} 
           className="flex-1 mr-2"
+          disabled={isMinting}
         >
           Create Object
         </Button>
         <Button 
           className="flex-1 bg-vr-purple hover:bg-vr-purple/90"
           onClick={handleMintNFT}
+          disabled={isMinting || !selectedAccount}
         >
-          Mint as NFT
+          {isMinting ? "Minting..." : "Mint as NFT"}
         </Button>
       </CardFooter>
     </Card>
