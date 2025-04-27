@@ -1,0 +1,1 @@
+ink::storage::Mapping<u32, asset_hub_nft::NFTMetadata, ink::storage::traits::ResolverKey<ink::storage::traits::AutoKey, ink::storage::traits::ManualKey<223579193>>>

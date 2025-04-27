@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { web3Accounts, web3Enable } from "@polkadot/extension-dapp";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useWallet } from "@/contexts/WalletContext";
 
@@ -56,42 +55,48 @@ const WalletConnect = () => {
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-vr-purple">Wallet</CardTitle>
-        <CardDescription>Connect your Polkadot wallet to mint NFTs</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="w-full">
+      <div className="flex items-center mb-3">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center mr-3">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1.5l-1.8-1.8A2 2 0 0012.2 2H7.8a2 2 0 00-1.4.6L4.6 4H4z" />
+          </svg>
+        </div>
+        <h2 className="text-lg font-semibold">Wallet</h2>
+      </div>
+      
+      <div className="space-y-3">
         {selectedAccount ? (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between p-2 rounded-md bg-muted">
-              <div>
-                <p className="font-medium">{selectedAccount.meta.name || "Account"}</p>
-                <p className="text-sm text-muted-foreground">{formatAddress(selectedAccount.address)}</p>
+          <div className="space-y-3">
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <div className="text-xs text-gray-500 mb-1">Connected Address</div>
+              <div className="flex justify-between items-center">
+                <div className="font-medium">{selectedAccount.meta.name || "Account"}</div>
+                <div className="font-mono text-sm truncate text-gray-500">{formatAddress(selectedAccount.address)}</div>
               </div>
-              <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(selectedAccount.address)}>
-                Copy
-              </Button>
             </div>
+            <Button 
+              onClick={disconnectWallet}
+              className="w-full py-2 px-4 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+              variant="outline"
+            >
+              Disconnect
+            </Button>
           </div>
         ) : (
-          <div className="text-center p-4 border rounded-md border-dashed">
-            <p className="text-muted-foreground mb-4">No wallet connected</p>
+          <div className="text-center p-4 rounded-lg bg-gray-50 border border-gray-200 mb-4">
+            <p className="text-gray-500 mb-4">No wallet connected</p>
+            <Button 
+              onClick={connectWallet}
+              disabled={isConnecting}
+              className="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-medium hover:from-purple-600 hover:to-indigo-700 transition-all btn-hover-effect"
+            >
+              {isConnecting ? "Connecting..." : "Connect Wallet"}
+            </Button>
           </div>
         )}
-      </CardContent>
-      <CardFooter>
-        {selectedAccount ? (
-          <Button variant="destructive" className="w-full" onClick={disconnectWallet}>
-            Disconnect Wallet
-          </Button>
-        ) : (
-          <Button className="w-full bg-vr-purple hover:bg-vr-purple/90" onClick={connectWallet} disabled={isConnecting}>
-            {isConnecting ? "Connecting..." : "Connect Wallet"}
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 };
 

@@ -1,0 +1,10 @@
+/Users/carlos/vr-genesis-frame/contracts/substrate/AssetHubNFT/target/debug/deps/scale_encode-cc7189c6408c26d1.d: /Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/lib.rs /Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/impls/mod.rs /Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/impls/composite.rs /Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/impls/variant.rs /Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/error/mod.rs /Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/error/context.rs
+
+/Users/carlos/vr-genesis-frame/contracts/substrate/AssetHubNFT/target/debug/deps/libscale_encode-cc7189c6408c26d1.rmeta: /Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/lib.rs /Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/impls/mod.rs /Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/impls/composite.rs /Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/impls/variant.rs /Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/error/mod.rs /Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/error/context.rs
+
+/Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/lib.rs:
+/Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/impls/mod.rs:
+/Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/impls/composite.rs:
+/Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/impls/variant.rs:
+/Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/error/mod.rs:
+/Users/carlos/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/scale-encode-0.5.0/src/error/context.rs:

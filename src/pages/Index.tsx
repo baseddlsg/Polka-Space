@@ -1,6 +1,6 @@
-
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import Phase3Launcher from "@/components/vr/Phase3Launcher";
 
 const Index = () => {
   return (
@@ -91,6 +91,13 @@ const Index = () => {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Phase 3 Launcher Section */}
+      <section className="px-4 py-8 md:px-6 md:py-12 lg:py-16 bg-gradient-to-b from-white to-purple-50">
+        <div className="mx-auto max-w-6xl">
+          <Phase3Launcher />
         </div>
       </section>
 
