@@ -1,11 +1,16 @@
 [package]
 name = "asset_hub_nft_final"
 version = "0.1.0"
-authors = ["[your_name] <[your_email]>"]
+authors = ["VR Genesis Frame Team"]
 edition = "2021"
 
 [dependencies]
 ink = { version = "4.2.0", default-features = false }
+ink_primitives = { version = "4.2.0", default-features = false }
+ink_metadata = { version = "4.2.0", default-features = false, features = ["derive"], optional = true }
+ink_env = { version = "4.2.0", default-features = false }
+ink_storage = { version = "4.2.0", default-features = false }
+ink_prelude = { version = "4.2.0", default-features = false }
 
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2.6", default-features = false, features = ["derive"], optional = true }
@@ -15,11 +20,20 @@ ink_e2e = "4.2.0"
 
 [lib]
 path = "lib.rs"
+crate-type = [
+    "cdylib",
+    "rlib",
+]
 
 [features]
 default = ["std"]
 std = [
     "ink/std",
+    "ink_primitives/std",
+    "ink_metadata/std",
+    "ink_env/std",
+    "ink_storage/std",
+    "ink_prelude/std",
     "scale/std",
     "scale-info/std",
 ]
@@ -27,4 +41,4 @@ ink-as-dependency = []
 e2e-tests = []
 __ink_dylint_Storage = []
 __ink_dylint_EventBase = []
-__ink_dylint_Constructor = []
+__ink_dylint_Constructor = [] 

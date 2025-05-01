@@ -1,12 +1,12 @@
 [package]
-name = "AssetHubNFT_new"
+name = "asset_hub_nft"
 version = "0.1.0"
-authors = ["[your_name] <[your_email]>"]
+authors = ["VR Genesis Frame Team"]
 edition = "2021"
+description = "A cross-chain capable NFT contract for 3D assets on Asset Hub"
 
 [dependencies]
 ink = { version = "4.2.0", default-features = false }
-
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2.6", default-features = false, features = ["derive"], optional = true }
 

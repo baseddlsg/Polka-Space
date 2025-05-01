@@ -127,50 +127,110 @@ Our project presentation is available on Canva: [VR Genesis Frame Presentation](
 ## Demo Materials
 
 ### Video Demo
-✅ Demo video showing the VR environment and NFT functionality is available in the GitHub repository.
+✅ Demo video showing the VR environment and NFT functionality is available in the GitHub repository as `oiub.mp4`.
 
 ### Screenshots
-✅ Screenshots of the VR environment, NFT gallery, and asset creation process are available in the GitHub repository.
+✅ Screenshots of the VR environment, NFT gallery, and asset creation process are available in the GitHub repository as `1.png` through `6.png`.
 
 ### Project Explanation
-✅ An explainer video detailing how our project works is available in the GitHub repository.
+✅ An explainer video detailing how our project works is included in the demo video.
 
 ## Deployed Smart Contract
 
-**Note:** To complete the hackathon requirements, you need to deploy the smart contract to Polkadot Asset Hub. Follow these steps:
+**Deployment Status**: 
+- [x] Contract deployed
+- [x] Contract address added to this README
+
+Our MinimalNFT contract has been successfully deployed to the Shibuya testnet on the Astar network:
+
+```
+Contract Address: 5G7WkE8BE1cFjMPmSFz7moHcxKCnsya5LpEDujvRSTtpPY5a
+```
+
+You can view the contract on the Shibuya explorer: [https://shibuya.subscan.io/account/5G7WkE8BE1cFjMPmSFz7moHcxKCnsya5LpEDujvRSTtpPY5a](https://shibuya.subscan.io/account/5G7WkE8BE1cFjMPmSFz7moHcxKCnsya5LpEDujvRSTtpPY5a)
+
+### Alternative Minimal NFT Contract
+
+We've created a simplified MinimalNFT contract that successfully builds with the latest ink! version 5.1.1:
+
+```bash
+# The contract is located at:
+cd contracts/minimal_nft/minimal_nft
+
+# Build the contract:
+cargo contract build
+```
+
+This minimal version implements core NFT functionality:
+- Token minting with custom URI
+- Ownership management
+- Token URI retrieval
+- Transfer event emission
+
+This minimal contract can be deployed in place of the full contract if you encounter build issues with the complete version.
+
+### Deployment Instructions
+
+To deploy the smart contract to Polkadot Asset Hub or alternative networks, follow these steps:
 
 1. **Prepare your contract:**
    ```bash
+   # For the full contract:
    cd contracts/substrate/asset_hub_nft_final
+   
+   # OR for the minimal version:
+   cd contracts/minimal_nft/minimal_nft
    ```
 
 2. **Build the contract:**
    ```bash
-   # Install compatible cargo-contract version
+   # For the full contract (with compatible cargo-contract version):
    cargo install cargo-contract --version 3.2.0 --force
+   cargo contract build
    
-   # Build the contract
+   # OR for the minimal version (with latest cargo-contract):
+   cargo install cargo-contract --force
    cargo contract build
    ```
 
-3. **Deploy to Polkadot Asset Hub:**
+3. **Deploy to your chosen network:**
+
+   **Option A: Polkadot Asset Hub (Production)**
    ```bash
    # Upload the contract (replace with your own seed/private key)
    cargo contract upload --suri "your-private-key" --url wss://polkadot-asset-hub-rpc.polkadot.io target/ink/asset_hub_nft_final.contract --execute
+   
+   # OR for minimal version:
+   cargo contract upload --suri "your-private-key" --url wss://polkadot-asset-hub-rpc.polkadot.io target/ink/minimal_nft.contract --execute
+   ```
+
+   **Option B: Shibuya Testnet (Astar's Testnet)**
+   ```bash
+   # Upload the contract (replace with your own seed/private key)
+   cargo contract upload --suri "your-private-key" --url wss://shibuya-rpc.dwellir.com target/ink/minimal_nft.contract --execute
+   
+   # Note: Before deploying to Shibuya, ensure your account has sufficient SBY tokens
+   # Get testnet tokens from: https://portal.astar.network/shibuya-testnet/assets
    ```
 
 4. **Instantiate the contract:**
+
+   **Option A: Polkadot Asset Hub**
    ```bash
-   # Instantiate the contract with the code hash you receive from the upload step
+   # For the full contract:
    cargo contract instantiate --constructor new --args "VR Genesis NFT" "VRGNFT" --suri "your-private-key" --url wss://polkadot-asset-hub-rpc.polkadot.io CODE_HASH --execute
+   
+   # OR for the minimal version:
+   cargo contract instantiate --constructor new --suri "your-private-key" --url wss://polkadot-asset-hub-rpc.polkadot.io CODE_HASH --execute
    ```
 
-5. **Update this README with the actual contract address:**
-   After deploying, your contract will have an address. Use the format below with your actual address:
-   
-   [https://assethub-polkadot.subscan.io/account/YOUR_CONTRACT_ADDRESS](https://assethub-polkadot.subscan.io/account/YOUR_CONTRACT_ADDRESS)
+   **Option B: Shibuya Testnet**
+   ```bash
+   cargo contract instantiate --constructor new --suri "your-private-key" --url wss://shibuya-rpc.dwellir.com CODE_HASH --execute
+   ```
 
-This deployment will allow users to interact with your NFT contract on the Asset Hub parachain, enabling the minting and management of 3D assets in your VR environment.
+5. **Update your application configuration:**
+   After successful deployment, update your application's configuration with your actual contract address and network details.
 
 ## Getting Started
 
@@ -196,10 +256,22 @@ npm run dev
 ### Smart Contract Development
 
 ```bash
-# Build the Substrate contracts
-cd contracts/substrate/AssetHubNFT_new
+# Build the full featured Substrate contracts
+cd contracts/substrate/asset_hub_nft_final
+cargo contract build
+
+# OR build the minimal NFT contract
+cd contracts/minimal_nft/minimal_nft
 cargo contract build
 ```
+
+The project includes two NFT contract implementations:
+
+1. **Full-featured Asset Hub NFT Contract**: Includes advanced features like XCM integration, rich metadata for 3D assets, and cross-chain support. Located in `contracts/substrate/asset_hub_nft_final`.
+
+2. **Minimal NFT Contract**: A simplified implementation with core NFT features (minting, ownership, URIs) built with the latest ink! 5.1.1. Located in `contracts/minimal_nft/minimal_nft`.
+
+For the hackathon submission, either contract can be deployed to the Polkadot Asset Hub.
 
 ## License
 
