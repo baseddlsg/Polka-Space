@@ -10,7 +10,8 @@ export interface SceneObject {
   modelUrl?: string; // URL for GLB/GLTF models like avatars
   type?: 'box' | 'sphere' | 'cylinder' | 'torus' | 'avatar'; // Type of object
   color?: string; // Color for primitive shapes
-  // Add other properties like color, type ('box', 'avatar', etc.) if needed
+  name?: string; // Name of the object
+  metadata?: Record<string, any>; // Additional metadata for NFTs and other properties
 }
 
 interface ObjectState {

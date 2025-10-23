@@ -3,14 +3,14 @@ import { useWallet } from '@/contexts/WalletContext';
 import { Button } from '@/components/ui/button';
 import { useObjectStore } from '@/stores/objectStore';
 import { toast } from 'sonner';
-import { MoveRight, Upload, RefreshCw } from 'lucide-react';
+import { MoveRight, Upload, RefreshCw, Coins, CheckCircle, Clock } from 'lucide-react';
 import { fetchUserNFTs } from '@/services/mintingService';
-import { formatAddress } from '@/services/blockchainService';
 import { BLOCKCHAIN_CONFIG } from '@/config/blockchainConfig';
 import { resolveIPFSUri, fetchNFTMetadata } from '@/services/ipfsService';
+import MintingModal from '@/components/portfolio/MintingModal';
 
 // Improved placeholder image function with more aesthetically pleasing options
-const getPlaceholderImage = (seed: string) => 
+const getPlaceholderImage = (seed: string) =>
   `https://ui-avatars.com/api/?name=${encodeURIComponent(seed)}&background=6D28D9&color=fff&format=svg&bold=true`;
 
 interface NFT {
@@ -23,15 +23,21 @@ interface NFT {
   dateCreated?: string;
   collectionName?: string;
   metadata?: any;
+  isMinted?: boolean;
+  mintingStatus?: 'pending' | 'minting' | 'minted' | 'failed';
+  isOwned?: boolean;
 }
 
 const NFTGallery = () => {
   const { selectedAccount, connectWallet } = useWallet();
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [loading, setLoading] = useState(false);
-  const { addObject } = useObjectStore();
+  const { addObject, objects } = useObjectStore();
   const [selectedChain, setSelectedChain] = useState<string | 'all'>('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [showMintingModal, setShowMintingModal] = useState(false);
+  const [selectedObjectForMinting, setSelectedObjectForMinting] = useState<any>(null);
+  const [localModels, setLocalModels] = useState<any[]>([]);
 
   const chains = [
     { id: 'all', name: 'All Chains', color: 'bg-gradient-to-r from-purple-600 to-indigo-600' },
@@ -42,12 +48,12 @@ const NFTGallery = () => {
 
   const loadNFTs = async () => {
     if (!selectedAccount) return;
-    
+
     setLoading(true);
     try {
       // Fetch NFTs from all supported chains
       const userNFTs = await fetchUserNFTs(selectedAccount.address);
-      
+
       // Process and normalize NFT data
       const processedNFTs = await Promise.all(
         userNFTs.map(async (nft) => {
@@ -55,17 +61,17 @@ const NFTGallery = () => {
           let metadata = null;
           let modelUrl = nft.modelUrl;
           let image = nft.image;
-          
+
           // If there's a metadata URL, fetch and parse it
           if (nft.metadataUrl) {
             try {
               metadata = await fetchNFTMetadata(nft.metadataUrl);
-              
+
               // Use metadata image if available
               if (metadata.image) {
                 image = resolveIPFSUri(metadata.image);
               }
-              
+
               // Use metadata animation_url (3D model) if available
               if (metadata.animation_url) {
                 modelUrl = resolveIPFSUri(metadata.animation_url);
@@ -74,13 +80,13 @@ const NFTGallery = () => {
               console.error("Error fetching NFT metadata:", error);
             }
           }
-          
+
           // Use the chain's explorer URL if available
           const chainConfig = BLOCKCHAIN_CONFIG[nft.chain];
-          const explorerUrl = chainConfig && nft.tokenId 
+          const explorerUrl = chainConfig && nft.tokenId
             ? `${chainConfig.explorerUrl}token/${nft.tokenId}`
             : undefined;
-            
+
           return {
             ...nft,
             image: image || getPlaceholderImage(nft.name),
@@ -90,7 +96,7 @@ const NFTGallery = () => {
           };
         })
       );
-      
+
       setNfts(processedNFTs);
     } catch (error) {
       console.error("Error loading NFTs:", error);
@@ -102,11 +108,61 @@ const NFTGallery = () => {
     }
   };
 
+  // Load local 3D models from object store
+  const loadLocalModels = () => {
+    const models = objects.map(obj => ({
+      id: `local-${obj.id}`,
+      name: obj.name || `${obj.type || 'Model'} Object`,
+      image: getPlaceholderImage(obj.name || obj.type || 'Model'),
+      chain: 'local',
+      modelUrl: obj.modelUrl || '',
+      isMinted: obj.metadata?.isNFT || false,
+      mintingStatus: obj.metadata?.mintingStatus || 'pending',
+      isOwned: false,
+      metadata: {
+        ...obj.metadata,
+        shape: obj.type,
+        color: obj.color,
+        scale: obj.scale,
+        position: obj.position,
+        rotation: obj.rotation
+      }
+    }));
+    setLocalModels(models);
+  };
+
   // Refresh NFT list
   const handleRefresh = async () => {
     setRefreshing(true);
     await loadNFTs();
+    loadLocalModels();
     setRefreshing(false);
+  };
+
+  // Handle minting a local object
+  const handleMintObject = (localModel: any) => {
+    const objectDetails = {
+      name: localModel.name,
+      modelUrl: localModel.modelUrl,
+      shape: localModel.metadata?.shape,
+      color: localModel.metadata?.color,
+      scale: localModel.metadata?.scale?.[0] || 1,
+      metadata: localModel.metadata
+    };
+    setSelectedObjectForMinting(objectDetails);
+    setShowMintingModal(true);
+  };
+
+  // Handle successful minting
+  const handleMintSuccess = (result: any) => {
+    toast.success('NFT minted successfully!', {
+      description: `Token ID: ${result.tokenId}`
+    });
+
+    // Refresh the NFT list to show the newly minted NFT
+    handleRefresh();
+    setShowMintingModal(false);
+    setSelectedObjectForMinting(null);
   };
 
   useEffect(() => {
@@ -115,11 +171,16 @@ const NFTGallery = () => {
     } else {
       setNfts([]);
     }
-  }, [selectedAccount]);
+    loadLocalModels();
+  }, [selectedAccount, objects]);
 
-  const filteredNfts = selectedChain === 'all' 
-    ? nfts 
+  const filteredNfts = selectedChain === 'all'
+    ? nfts
     : nfts.filter(nft => nft.chain === selectedChain);
+
+  const filteredLocalModels = selectedChain === 'all' || selectedChain === 'local'
+    ? localModels
+    : [];
 
   const importNFTToScene = (nft: NFT) => {
     console.log("Importing NFT to scene:", nft.name);
@@ -157,10 +218,10 @@ const NFTGallery = () => {
   const formatDate = (dateString?: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
     });
   };
 
@@ -170,10 +231,10 @@ const NFTGallery = () => {
       {selectedAccount && (
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-sm font-medium text-gray-700">Your NFT Collection</h3>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-8 w-8 p-0" 
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
             onClick={handleRefresh}
             disabled={loading || refreshing}
           >
@@ -182,22 +243,32 @@ const NFTGallery = () => {
           </Button>
         </div>
       )}
-      
+
       {/* Chain filter tabs */}
       <div className="flex space-x-1 overflow-x-auto pb-2 scrollbar-none">
         {chains.map(chain => (
           <button
             key={chain.id}
             onClick={() => setSelectedChain(chain.id)}
-            className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all ${
-              selectedChain === chain.id
+            className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all ${selectedChain === chain.id
                 ? `${chain.color} text-white shadow-md`
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
+              }`}
           >
             {chain.name}
           </button>
         ))}
+        {localModels.length > 0 && (
+          <button
+            onClick={() => setSelectedChain('local')}
+            className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all ${selectedChain === 'local'
+                ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+          >
+            Local Models ({localModels.length})
+          </button>
+        )}
       </div>
 
       {!selectedAccount ? (
@@ -209,7 +280,7 @@ const NFTGallery = () => {
           </div>
           <p className="text-gray-500 mb-4">Connect your wallet to view your NFTs</p>
           <Button
-            variant="outline" 
+            variant="outline"
             className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 border-0"
             onClick={() => connectWallet()}
           >
@@ -221,7 +292,7 @@ const NFTGallery = () => {
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-500 border-r-transparent align-[-0.125em]"></div>
           <p className="mt-4 text-gray-500">Loading your NFT collection...</p>
         </div>
-      ) : filteredNfts.length === 0 ? (
+      ) : filteredNfts.length === 0 && filteredLocalModels.length === 0 ? (
         <div className="bg-gray-50 rounded-xl p-6 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-200 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -241,47 +312,140 @@ const NFTGallery = () => {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 max-h-[360px] overflow-y-auto thin-scrollbar pr-2">
-          {filteredNfts.map(nft => (
-            <div 
-              key={nft.id} 
-              className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300"
-            >
-              <div 
-                className={`h-28 ${getChainColor(nft.chain)} flex items-center justify-center relative`}
-              >
-                <img
-                  src={nft.image}
-                  alt={nft.name}
-                  className="w-20 h-20 object-contain"
-                  onError={(e) => (e.currentTarget.src = getPlaceholderImage(nft.name))}
-                />
-                <span className="absolute top-2 right-2 bg-white text-xs px-2 py-0.5 rounded-full text-gray-700 font-medium">
-                  {getChainName(nft.chain).split(' ')[0]}
-                </span>
-              </div>
-              <div className="p-3">
-                <h3 className="font-medium text-sm mb-1 truncate">{nft.name}</h3>
-                {nft.tokenId && (
-                  <p className="text-xs text-gray-500 mb-2">
-                    Token #{nft.tokenId.length > 8 ? `${nft.tokenId.slice(0,4)}...${nft.tokenId.slice(-4)}` : nft.tokenId}
-                    {nft.dateCreated && <span className="block text-gray-400">{formatDate(nft.dateCreated)}</span>}
-                  </p>
-                )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full text-xs py-1 font-medium border-purple-200 text-purple-600 hover:bg-purple-50"
-                  onClick={() => importNFTToScene(nft)}
-                >
-                  <MoveRight className="h-3 w-3 mr-1" /> 
-                  Import to Scene
-                </Button>
+        <div className="space-y-4">
+          {/* Local Models Section */}
+          {filteredLocalModels.length > 0 && (
+            <div>
+              <h4 className="text-xs font-medium text-gray-600 mb-2 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                Local Models ({filteredLocalModels.length})
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                {filteredLocalModels.map(model => (
+                  <div
+                    key={model.id}
+                    className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300"
+                  >
+                    <div className="h-28 bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center relative">
+                      <img
+                        src={model.image}
+                        alt={model.name}
+                        className="w-20 h-20 object-contain"
+                        onError={(e) => (e.currentTarget.src = getPlaceholderImage(model.name))}
+                      />
+                      {model.isMinted && (
+                        <div className="absolute top-2 right-2 bg-white text-xs px-2 py-0.5 rounded-full text-green-600 font-medium flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3" />
+                          Minted
+                        </div>
+                      )}
+                      {model.mintingStatus === 'minting' && (
+                        <div className="absolute top-2 right-2 bg-white text-xs px-2 py-0.5 rounded-full text-orange-600 font-medium flex items-center gap-1">
+                          <Clock className="h-3 w-3 animate-spin" />
+                          Minting
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <h3 className="font-medium text-sm mb-1 truncate">{model.name}</h3>
+                      <p className="text-xs text-gray-500 mb-2">
+                        {model.metadata?.shape || 'Custom'} • Local
+                      </p>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 text-xs py-1 font-medium border-purple-200 text-purple-600 hover:bg-purple-50"
+                          onClick={() => importNFTToScene(model)}
+                        >
+                          <MoveRight className="h-3 w-3 mr-1" />
+                          Import
+                        </Button>
+                        {!model.isMinted && selectedAccount && (
+                          <Button
+                            size="sm"
+                            className="flex-1 text-xs py-1 font-medium bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
+                            onClick={() => handleMintObject(model)}
+                            disabled={model.mintingStatus === 'minting'}
+                          >
+                            <Coins className="h-3 w-3 mr-1" />
+                            Mint
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
+
+          {/* Minted NFTs Section */}
+          {filteredNfts.length > 0 && (
+            <div>
+              <h4 className="text-xs font-medium text-gray-600 mb-2 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                Minted NFTs ({filteredNfts.length})
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                {filteredNfts.map(nft => (
+                  <div
+                    key={nft.id}
+                    className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300"
+                  >
+                    <div
+                      className={`h-28 ${getChainColor(nft.chain)} flex items-center justify-center relative`}
+                    >
+                      <img
+                        src={nft.image}
+                        alt={nft.name}
+                        className="w-20 h-20 object-contain"
+                        onError={(e) => (e.currentTarget.src = getPlaceholderImage(nft.name))}
+                      />
+                      <span className="absolute top-2 right-2 bg-white text-xs px-2 py-0.5 rounded-full text-gray-700 font-medium">
+                        {getChainName(nft.chain).split(' ')[0]}
+                      </span>
+                      <div className="absolute top-2 left-2 bg-white text-xs px-2 py-0.5 rounded-full text-green-600 font-medium flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" />
+                        Owned
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <h3 className="font-medium text-sm mb-1 truncate">{nft.name}</h3>
+                      {nft.tokenId && (
+                        <p className="text-xs text-gray-500 mb-2">
+                          Token #{nft.tokenId.length > 8 ? `${nft.tokenId.slice(0, 4)}...${nft.tokenId.slice(-4)}` : nft.tokenId}
+                          {nft.dateCreated && <span className="block text-gray-400">{formatDate(nft.dateCreated)}</span>}
+                        </p>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-xs py-1 font-medium border-purple-200 text-purple-600 hover:bg-purple-50"
+                        onClick={() => importNFTToScene(nft)}
+                      >
+                        <MoveRight className="h-3 w-3 mr-1" />
+                        Import to Scene
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Minting Modal */}
+      <MintingModal
+        isOpen={showMintingModal}
+        onClose={() => {
+          setShowMintingModal(false);
+          setSelectedObjectForMinting(null);
+        }}
+        objectDetails={selectedObjectForMinting}
+        onMintSuccess={handleMintSuccess}
+      />
     </div>
   );
 };

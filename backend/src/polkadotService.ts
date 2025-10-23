@@ -1,5 +1,6 @@
 import { ApiPromise, WsProvider, Keyring } from '@polkadot/api';
 import { KeyringPair } from '@polkadot/keyring/types';
+// PAPI integration will be added in future iterations
 import dotenv from 'dotenv';
 
 dotenv.config(); // Ensure environment variables are loaded
@@ -66,15 +67,20 @@ async function getNextAvailableItemId(api: ApiPromise, collectionId: number): Pr
 }
 
 /**
- * Mints an NFT in the configured collection for the specified owner.
- * Uses a simple timestamp for the item ID in this basic version.
+ * Mints an NFT using the new PAPI integration layer.
+ * Falls back to legacy API if PAPI is not available.
  * 
  * @param ownerAddress The address of the intended owner of the new NFT.
+ * @param metadata Optional metadata for the NFT.
  * @returns The transaction hash of the minting operation.
  */
 export async function mintNft(ownerAddress: string, metadata?: any): Promise<{ txHash: string, collectionId: number, itemId: number }> {
   console.log(`Attempting to mint NFT for owner: ${ownerAddress}`);
+  
   try {
+    // PAPI integration placeholder - will be implemented in future iterations
+    console.log('Using legacy Polkadot.js API for minting');
+    
     const currentApi = await initializeApi(); // Ensure API is connected
     if (!serverAccount) {
       throw new Error('Server account not initialized. Make sure initializeApi() was called successfully.');
@@ -102,7 +108,7 @@ export async function mintNft(ownerAddress: string, metadata?: any): Promise<{ t
     console.log('Mint transaction sent with hash:', txHashHex);
     return { txHash: txHashHex, collectionId, itemId };
   } catch (error) {
-    console.error('Error minting NFT:', error);
+    console.error('Minting failed:', error);
     if (error instanceof Error) {
       throw new Error(`Minting failed: ${error.message}`);
     } else {

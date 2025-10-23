@@ -1,0 +1,37 @@
+[package]
+name = "nft_portfolio"
+version = "0.1.0"
+authors = ["Polka-Space Team"]
+edition = "2021"
+
+[dependencies]
+ink = { version = "4.3", default-features = false }
+scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
+scale-info = { version = "2.6", default-features = false, features = ["derive"], optional = true }
+
+[lib]
+name = "nft_portfolio"
+path = "lib.rs"
+crate-type = [
+    # Used for normal contract Wasm blobs.
+    "cdylib",
+]
+
+[features]
+default = ["std"]
+std = [
+    "ink/std",
+    "scale/std",
+    "scale-info/std",
+]
+ink-as-dependency = []
+
+[profile.release]
+panic = "abort"
+lto = true
+opt-level = "z"
+overflow-checks = true
+
+[profile.dev]
+panic = "abort"
+lto = false

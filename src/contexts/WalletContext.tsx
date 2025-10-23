@@ -22,6 +22,9 @@ interface WalletContextType {
   accounts: Account[];
   chainType: 'substrate' | 'evm' | null;
   setChainType: (type: 'substrate' | 'evm' | null) => void;
+  papiConnected: boolean;
+  connectToPAPI: () => Promise<void>;
+  disconnectFromPAPI: () => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -43,6 +46,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [extensions, setExtensions] = useState<InjectedExtension[]>([]);
   const [chainType, setChainType] = useState<'substrate' | 'evm' | null>(null);
+  const [papiConnected, setPapiConnected] = useState<boolean>(false);
   
   // Check for stored wallet connection on app load
   useEffect(() => {
@@ -145,8 +149,60 @@ export function WalletProvider({ children }: WalletProviderProps) {
     setChainType(null);
     localStorage.removeItem('selectedWalletAccount');
     localStorage.removeItem('selectedChainType');
+    disconnectFromPAPI();
     toast.success("Wallet disconnected");
   };
+
+  const connectToPAPI = async () => {
+    try {
+      toast.loading("Connecting to PAPI...");
+      
+      // Call backend API to initialize PAPI connection
+      const response = await fetch('/api/papi/connect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          account: selectedAccount?.address,
+          chainType: chainType
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to connect to PAPI');
+      }
+
+      const result = await response.json();
+      setPapiConnected(true);
+      
+      toast.success("Connected to PAPI", {
+        description: "Enhanced blockchain features enabled"
+      });
+      
+      return result;
+    } catch (error) {
+      console.error("PAPI connection error:", error);
+      setPapiConnected(false);
+      toast.error("Failed to connect to PAPI", {
+        description: error instanceof Error ? error.message : "Unknown error"
+      });
+      throw error;
+    }
+  };
+
+  const disconnectFromPAPI = () => {
+    setPapiConnected(false);
+    // Optionally call backend to cleanup PAPI connections
+    fetch('/api/papi/disconnect', { method: 'POST' }).catch(console.error);
+  };
+
+  // Auto-connect to PAPI when wallet is connected
+  useEffect(() => {
+    if (selectedAccount && chainType === 'substrate' && !papiConnected) {
+      connectToPAPI().catch(console.error);
+    }
+  }, [selectedAccount, chainType]);
   
   return (
     <WalletContext.Provider value={{
@@ -157,7 +213,10 @@ export function WalletProvider({ children }: WalletProviderProps) {
       disconnectWallet,
       accounts,
       chainType,
-      setChainType
+      setChainType,
+      papiConnected,
+      connectToPAPI,
+      disconnectFromPAPI
     }}>
       {children}
     </WalletContext.Provider>

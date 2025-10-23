@@ -1,0 +1,63 @@
+# NFT Portfolio Contract Deployment Configuration
+
+[contract]
+name = "nft_portfolio"
+version = "0.1.0"
+description = "Enhanced NFT Portfolio contract for 3D artwork minting and management"
+
+[networks.local]
+name = "Local Testnet"
+endpoint = "ws://localhost:9944"
+chain_id = "dev"
+account = "//Alice"
+gas_limit = 1000000000000
+storage_deposit_limit = null
+
+[networks.assethub_testnet]
+name = "AssetHub Testnet"
+endpoint = "wss://asset-hub-polkadot-rpc.dwellir.com"
+chain_id = "asset-hub-polkadot"
+# Account should be provided via CLI or environment variable
+gas_limit = 1000000000000
+storage_deposit_limit = null
+
+[networks.assethub_mainnet]
+name = "AssetHub Mainnet"
+endpoint = "wss://asset-hub-polkadot-rpc.polkadot.io"
+chain_id = "asset-hub-polkadot"
+# Account should be provided via CLI or environment variable
+gas_limit = 1000000000000
+storage_deposit_limit = null
+
+[constructor]
+name = "new"
+args = [
+    "Polka-Space NFT Portfolio",  # Collection name
+    "PSNFT"                       # Collection symbol
+]
+
+[deployment]
+# Deployment settings
+verify_contract = true
+save_deployment_info = true
+run_tests_before_deploy = true
+check_contract_size = true
+max_contract_size_mb = 2
+
+[testing]
+# Test configuration
+run_unit_tests = true
+run_integration_tests = false  # Set to true when integration tests are available
+test_timeout_seconds = 300
+
+[validation]
+# Pre-deployment validation
+check_metadata_format = true
+validate_constructor_args = true
+check_storage_layout = true
+
+[post_deployment]
+# Actions to perform after successful deployment
+create_verification_file = true
+upload_to_registry = false  # Set to true to upload to contract registry
+notify_webhook = false      # Set webhook URL if needed

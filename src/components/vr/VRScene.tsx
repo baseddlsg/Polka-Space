@@ -1,12 +1,17 @@
 import React, { Suspense, useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Sky, PerspectiveCamera, MeshReflectorMaterial, SoftShadows, TransformControls, Html, Sparkles } from "@react-three/drei";
-import { useAvatar } from "@/contexts/AvatarContext";
+import { Sky, PerspectiveCamera, MeshReflectorMaterial, SoftShadows, TransformControls, Sparkles } from "@react-three/drei";
 import { useObjectStore } from "@/stores/objectStore";
+import { useWallet } from "@/contexts/WalletContext";
+import { useIntegration } from "@/hooks/useIntegration";
 import Model from "./Model";
 import VRExplorer from "./VRExplorer";
+import MintButton from "./MintButton";
+import OwnershipIndicator from "./OwnershipIndicator";
+import IntegrationStatus from "@/components/ui/IntegrationStatus";
 import * as THREE from 'three';
 import { PointerLockControls as THREEPointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
+import { toast } from "sonner";
 
 // --- NEW Internal Component for Pointer Lock Logic ---
 const PointerLockController = ({ onDeleteKeyPress }: { onDeleteKeyPress: () => void }) => {
@@ -113,13 +118,16 @@ const PointerLockController = ({ onDeleteKeyPress }: { onDeleteKeyPress: () => v
 
 // Object 3D Component for scene objects
 const Object3D = React.forwardRef((
-  { object, isSelected, onSelect }: { 
+  { object, isSelected, onSelect, showMintingUI = false }: { 
     object: any, 
     isSelected: boolean, 
-    onSelect: () => void 
+    onSelect: () => void,
+    showMintingUI?: boolean
   }, 
   ref: React.Ref<THREE.Group>
 ) => {
+  const { selectedAccount } = useWallet();
+  
   // Calculate adjusted position to place group origin just above floor
   const adjustedY = 0.01; // Place origin near floor
   const adjustedPosition: THREE.Vector3Tuple = [
@@ -130,6 +138,28 @@ const Object3D = React.forwardRef((
 
   // Check if this is an XCM NFT
   const isXCMNFT = object.metadata?.isXCMNFT;
+  
+  // Determine ownership status
+  const getOwnershipStatus = () => {
+    if (isXCMNFT) return 'xcm';
+    if (object.metadata?.isNFT && object.metadata?.tokenId) {
+      return object.metadata?.nftChain ? 'owned' : 'minted';
+    }
+    if (object.metadata?.mintingStatus === 'minting') return 'minting';
+    return 'local';
+  };
+
+  const ownershipStatus = getOwnershipStatus();
+
+  // Object details for minting
+  const objectDetails = {
+    name: object.name || `${object.type || 'Model'} Object`,
+    modelUrl: object.modelUrl,
+    shape: object.type,
+    color: object.color,
+    scale: object.scale?.[0] || 1,
+    metadata: object.metadata
+  };
 
   return (
     <group 
@@ -144,14 +174,35 @@ const Object3D = React.forwardRef((
     >
       {/* XCM NFT Special Effects */}
       {isXCMNFT && (
-        <>
-          <Sparkles count={20} scale={1.5} size={6} speed={0.4} color="#ff88ff" />
-          <Html position={[0, 1.5, 0]} center distanceFactor={10}>
-            <div className="bg-indigo-800 px-2 py-1 rounded text-white text-xs whitespace-nowrap">
-              XCM: {object.metadata.originChain}
-            </div>
-          </Html>
-        </>
+        <Sparkles count={20} scale={1.5} size={6} speed={0.4} color="#ff88ff" />
+      )}
+
+      {/* Ownership Indicator */}
+      <OwnershipIndicator
+        position={[0, 2.5, 0]}
+        status={ownershipStatus}
+        tokenId={object.metadata?.tokenId}
+        chainName={object.metadata?.nftChain || object.metadata?.chainId}
+        ownerAddress={selectedAccount?.address}
+        visible={isSelected || ownershipStatus !== 'local'}
+        compact={!isSelected}
+      />
+
+      {/* Mint Button for local objects */}
+      {isSelected && showMintingUI && ownershipStatus === 'local' && selectedAccount && (
+        <MintButton
+          position={[0, 1.8, 0]}
+          objectDetails={objectDetails}
+          onMintStart={() => {
+            // Update object metadata to show minting status
+            // This would typically be handled by the object store
+          }}
+          onMintSuccess={(result) => {
+            // Update object metadata with minting result
+            // This would typically be handled by the object store
+          }}
+          visible={true}
+        />
       )}
 
       {object.modelUrl ? (
@@ -191,9 +242,13 @@ interface VRSceneProps {
 // Update component definition
 const VRScene: React.FC<VRSceneProps> = ({ showExplorer: externalShowExplorer, onExplorerChange }) => {
   const { objects, updateObjectTransform, removeObject } = useObjectStore();
+  const { selectedAccount } = useWallet();
+  const { mintNFT, syncPortfolio, isLoading, currentFlow, error } = useIntegration();
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   const objectRefs = useRef<Record<string, THREE.Group | null>>({});
   const [transformMode, setTransformMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
+  const [showMintingUI, setShowMintingUI] = useState(true);
+  const [showIntegrationStatus, setShowIntegrationStatus] = useState(false);
   // Update to sync with external state if provided
   const [internalShowExplorer, setInternalShowExplorer] = useState(false);
   
@@ -211,16 +266,27 @@ const VRScene: React.FC<VRSceneProps> = ({ showExplorer: externalShowExplorer, o
     }
   }, [showExplorer, onExplorerChange]);
   
-  // Add a state dependency to force re-render and recomputation of selectedObject
-  const [objectRefsUpdated, setObjectRefsUpdated] = useState(0);
-  
   // Safely check if the selected object reference exists
   const selectedObject = useMemo(() => {
     if (selectedObjectId && objectRefs.current[selectedObjectId]) {
       return objectRefs.current[selectedObjectId];
     }
     return null;
-  }, [selectedObjectId, objectRefsUpdated]);
+  }, [selectedObjectId]);
+
+  // Show integration status when there's an active flow
+  useEffect(() => {
+    setShowIntegrationStatus(!!currentFlow || !!error || isLoading);
+  }, [currentFlow, error, isLoading]);
+
+  // Auto-sync portfolio when wallet connects
+  useEffect(() => {
+    if (selectedAccount && !isLoading) {
+      syncPortfolio().catch(error => {
+        console.warn('Portfolio sync failed:', error);
+      });
+    }
+  }, [selectedAccount, syncPortfolio, isLoading]);
 
   // Update object store when transform controls are dragged
   const handleTransformChange = useCallback(() => {
@@ -247,6 +313,14 @@ const VRScene: React.FC<VRSceneProps> = ({ showExplorer: externalShowExplorer, o
 
   return (
     <div className="w-full h-full vr-canvas-container relative">
+      {/* Integration Status Overlay */}
+      {showIntegrationStatus && (
+        <IntegrationStatus 
+          showMinimized={true}
+          onClose={() => setShowIntegrationStatus(false)}
+        />
+      )}
+
       {/* Mode Buttons Row - update to include explorer button */}
       <div className="absolute top-2 left-2 z-10 flex gap-1 p-1 bg-black/50 rounded">
         {/* Show transform controls when not in explorer mode */}
@@ -269,6 +343,12 @@ const VRScene: React.FC<VRSceneProps> = ({ showExplorer: externalShowExplorer, o
               className={`px-2 py-1 text-xs rounded ${transformMode === 'scale' ? 'bg-blue-600 text-white' : 'bg-gray-600 text-gray-200 hover:bg-gray-500'}`}
             >
               Scale
+            </button>
+            <button
+              onClick={() => setShowMintingUI(!showMintingUI)}
+              className={`px-2 py-1 text-xs rounded ${showMintingUI ? 'bg-green-600 text-white' : 'bg-gray-600 text-gray-200 hover:bg-gray-500'}`}
+            >
+              Mint UI
             </button>
           </>
         )}
@@ -346,6 +426,7 @@ const VRScene: React.FC<VRSceneProps> = ({ showExplorer: externalShowExplorer, o
                   object={object}
                   isSelected={object.id === selectedObjectId}
                   onSelect={onSelect}
+                  showMintingUI={showMintingUI}
                   ref={ref => objectRefs.current[object.id] = ref}
                 />
               );
