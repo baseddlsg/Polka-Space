@@ -19,6 +19,7 @@ import { NotificationService } from './services/notificationService';
 import { nftCache, portfolioCache, communityCache, withCache, cacheKeys } from './services/cacheService';
 import { MintRequest, MintResponse, NFTInfo } from './types/nft';
 import { initializePAPIService, getPAPIService } from './papi/papiService';
+import * as polkadotService from './polkadotService';
 import analyticsRoutes from './routes/analytics';
 
 // Load environment variables from .env file
@@ -49,38 +50,20 @@ const transactionManager = new TransactionManager();
 const metadataProcessor = new MetadataProcessor();
 const notificationService = new NotificationService();
 
-// Initialize PAPI service
+// Initialize PAPI service and polkadot service
 let papiService: any = null;
-initializePAPIService().then(service => {
-  papiService = service;
-  console.log('PAPI Service initialized successfully');
-}).catch(error => {
-  console.error('Failed to initialize PAPI Service:', error);
-});
 
-// Mock PAPI service for now (will be replaced with actual implementation)
-const mockPAPIService = {
-  validateAddress: (address: string): boolean => {
-    return Boolean(address && address.length > 10);
-  },
-  mintNFT: async (ownerAddress: string, metadata: any) => {
-    return {
-      txHash: `0x${Math.random().toString(16).substr(2, 64)}`,
-      collectionId: 1,
-      itemId: Math.floor(Math.random() * 1000) + 1
-    };
-  },
-  getNFTsByOwner: async (address: string) => {
-    return [];
-  },
-  getNFTInfo: async (collectionId: number, itemId: number) => {
-    return {
-      collectionId,
-      itemId,
-      owner: '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY'
-    };
-  }
-};
+// Initialize both services
+Promise.all([
+  initializePAPIService(),
+  polkadotService.initializeApi()
+]).then(([papi, _]) => {
+  papiService = papi;
+  console.log('PAPI Service and Polkadot Service initialized successfully');
+}).catch(error => {
+  console.error('Failed to initialize services:', error);
+  console.error('Server will continue but blockchain operations may fail');
+});
 
 // --- Routes ---
 app.use('/api/analytics', analyticsRoutes);
@@ -108,8 +91,9 @@ app.post('/mint', rateLimiters.minting, rateLimiters.walletMinting, asyncHandler
     throw new ValidationError('Missing required fields: ownerAddress and metadata');
   }
 
-  // Validate address format
-  if (!mockPAPIService.validateAddress(mintRequest.ownerAddress)) {
+  // Validate address format using wallet adapter
+  const wallet = polkadotService.getWalletAdapter();
+  if (!wallet.validateAddress(mintRequest.ownerAddress)) {
     throw new ValidationError('Invalid owner address format');
   }
 
@@ -132,9 +116,9 @@ app.post('/mint', rateLimiters.minting, rateLimiters.walletMinting, asyncHandler
   });
 
   try {
-    // Initiate minting with blockchain retry logic
+    // Initiate minting with blockchain retry logic using real PAPI service
     const mintResult = await retryUtils.retryBlockchainOperation(
-      () => mockPAPIService.mintNFT(mintRequest.ownerAddress, processedMetadata),
+      () => polkadotService.mintNft(mintRequest.ownerAddress, processedMetadata),
       'NFT minting'
     );
     
@@ -190,7 +174,8 @@ app.post('/mint', rateLimiters.minting, rateLimiters.walletMinting, asyncHandler
 app.get('/portfolio/:address', rateLimiters.query, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { address } = req.params;
   
-  if (!mockPAPIService.validateAddress(address)) {
+  const wallet = polkadotService.getWalletAdapter();
+  if (!wallet.validateAddress(address)) {
     throw new ValidationError('Invalid address format');
   }
 
@@ -201,7 +186,7 @@ app.get('/portfolio/:address', rateLimiters.query, asyncHandler(async (req: Requ
     cacheKeys.portfolio(address),
     async () => {
       const nfts = await retryUtils.retryBlockchainOperation(
-        () => mockPAPIService.getNFTsByOwner(address),
+        () => polkadotService.getNFTsByOwner(address),
         'fetch user NFTs'
       );
       
@@ -309,7 +294,7 @@ app.get('/nft/:collectionId/:itemId', async (req: Request, res: Response): Promi
     const nftInfo = await withCache(
       cacheKeys.nft(collectionId, itemId),
       async () => {
-        return await mockPAPIService.getNFTInfo(collectionId, itemId);
+        return await polkadotService.getNFTInfo(collectionId, itemId);
       },
       nftCache,
       600 // 10 minutes cache

@@ -88,3 +88,27 @@ The NFT Portfolio Integration feature transforms Polka-Space from a static 3D en
 3. THE Testing_Suite SHALL include mock wallet and testnet environments for quality assurance
 4. THE Testing_Suite SHALL log performance metrics and user interaction data
 5. WHERE tests fail, THE Testing_Suite SHALL provide detailed error reporting for debugging
+
+### Requirement 7
+
+**User Story:** As a grant reviewer, I want to verify complete PAPI migration with no legacy Polkadot JS API usage, so that I can confirm the project meets the milestone requirements.
+
+#### Acceptance Criteria
+
+1. THE PAPI_Layer SHALL be the exclusive blockchain interaction layer with zero Polkadot JS API imports in production code
+2. THE Frontend_Services SHALL use PAPI_Layer for all wallet connections and chain queries
+3. THE Backend_Services SHALL use PAPI_Layer for all NFT minting and blockchain operations
+4. THE Project SHALL build and run successfully without errors or warnings
+5. WHERE testing requires mocks, THE Testing_Suite SHALL mock PAPI interfaces rather than legacy APIs
+
+### Requirement 8
+
+**User Story:** As a grant reviewer, I want comprehensive documentation and test cases demonstrating PAPI integration, so that I can validate the implementation quality.
+
+#### Acceptance Criteria
+
+1. THE Documentation SHALL provide clear examples of PAPI wallet adapter usage
+2. THE Documentation SHALL explain chain query implementation with PAPI
+3. THE Testing_Suite SHALL include integration tests demonstrating PAPI functionality
+4. THE Documentation SHALL include setup instructions for running the project
+5. WHERE PAPI is used, THE Documentation SHALL explain the migration from legacy API

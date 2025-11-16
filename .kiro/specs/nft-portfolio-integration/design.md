@@ -186,17 +186,60 @@ interface MintTransaction {
 - **Wallet Compatibility**: Testing with multiple Polkadot wallet providers
 - **Transaction Verification**: On-chain verification of minted NFTs and metadata
 
+## PAPI Migration Strategy
+
+### Complete Migration Requirements
+
+The project MUST complete full migration from Polkadot JS API to PAPI (Polkadot API) as mandated by the Polkadot team. This involves:
+
+#### Backend Migration
+- **Remove all `@polkadot/api` imports** from production code
+- **Use `polkadot-api` package** exclusively for blockchain interactions
+- **Migrate `polkadotService.ts`** to use PAPI client instead of ApiPromise
+- **Update all chain queries** to use PAPI typed descriptors
+- **Refactor transaction signing** to use PAPI signer interface
+
+#### Frontend Migration
+- **Remove `@polkadot/api` dependency** from package.json
+- **Migrate `blockchainService.ts`** to use backend PAPI endpoints
+- **Update `mintingService.ts`** to call backend PAPI services
+- **Remove `xcmService.ts`** direct API usage in favor of backend abstraction
+- **Update wallet connections** to use PAPI-compatible adapters
+
+#### Key PAPI Advantages
+- **Type Safety**: Full TypeScript support with generated types
+- **Better Performance**: Optimized RPC calls and caching
+- **Modern Architecture**: Promise-based API with better error handling
+- **Future Proof**: Officially recommended by Polkadot team
+- **Smaller Bundle**: Reduced frontend bundle size
+
+### PAPI Implementation Pattern
+
+```typescript
+// CORRECT: Using PAPI
+import { createClient } from "polkadot-api";
+import { getWsProvider } from "@polkadot-api/ws-provider";
+
+const client = createClient(getWsProvider(endpoint));
+const nfts = await client.query.Nfts.Item.getValue(collectionId, itemId);
+
+// INCORRECT: Using legacy API (must be removed)
+import { ApiPromise, WsProvider } from '@polkadot/api';
+const api = await ApiPromise.create({ provider: new WsProvider(endpoint) });
+```
+
 ## Security Considerations
 
 ### Frontend Security
-- **Wallet Integration**: Secure handling of wallet connections and signatures
+- **Wallet Integration**: Secure handling of wallet connections and signatures via PAPI adapters
 - **Input Validation**: Client-side validation for all user inputs
 - **XSS Prevention**: Sanitization of user-generated content and metadata
 
 ### Backend Security
 - **API Authentication**: Rate limiting and request validation
 - **Metadata Sanitization**: Validation and cleaning of 3D model metadata
-- **Transaction Security**: Secure handling of blockchain transactions and private keys
+- **Transaction Security**: Secure handling of blockchain transactions via PAPI signer
+- **No Private Keys in Frontend**: All signing operations through backend PAPI service
 
 ### Smart Contract Security
 - **Access Control**: Proper ownership validation and transfer restrictions
@@ -209,13 +252,15 @@ interface MintTransaction {
 - **3D Model Caching**: Efficient caching of frequently accessed models
 - **Lazy Loading**: Progressive loading of NFT collections
 - **Virtual Scrolling**: Optimized rendering for large portfolio collections
+- **Reduced Bundle Size**: PAPI migration reduces frontend bundle by removing heavy dependencies
 
 ### Backend Optimization
 - **Database Indexing**: Optimized queries for NFT ownership and metadata
 - **Caching Layer**: Redis caching for frequently accessed blockchain data
-- **Connection Pooling**: Efficient management of blockchain connections
+- **PAPI Connection Pooling**: Efficient management of PAPI client connections
+- **Typed Queries**: PAPI's typed queries reduce runtime errors and improve performance
 
 ### Blockchain Optimization
 - **Batch Operations**: Grouping multiple operations to reduce transaction costs
 - **Metadata Compression**: Efficient encoding of 3D model metadata
-- **Query Optimization**: Minimizing blockchain queries through smart caching
+- **Query Optimization**: PAPI's built-in caching minimizes redundant blockchain queries

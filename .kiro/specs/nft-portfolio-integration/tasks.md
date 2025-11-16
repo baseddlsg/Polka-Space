@@ -195,3 +195,93 @@
     - Add production configuration and environment variables
     - Create deployment documentation and setup guides
     - _Requirements: 6.4_
+
+- [ ] 11. Complete PAPI migration and remove all Polkadot JS API usage
+  - [x] 11.1 Audit codebase for remaining Polkadot JS API imports
+    - Search entire codebase for `@polkadot/api` imports
+    - Identify all files using ApiPromise, WsProvider, or ContractPromise
+    - Document each usage location and required migration path
+    - Create migration checklist for systematic replacement
+    - _Requirements: 7.1, 7.2, 7.3_
+
+  - [x] 11.2 Complete backend PAPI migration
+    - Migrate `backend/src/polkadotService.ts` to use PAPI exclusively
+    - Update `mintNft` function to use PAPI client and typed queries
+    - Implement proper PAPI transaction signing with server account
+    - Add PAPI-based NFT querying and ownership verification
+    - Remove all `@polkadot/api` imports from backend production code
+    - _Requirements: 7.1, 7.3, 7.4_
+
+  - [x] 11.3 Migrate frontend services to use backend PAPI endpoints
+    - Refactor `src/services/blockchainService.ts` to call backend PAPI APIs
+    - Update `src/services/mintingService.ts` to use backend minting endpoints
+    - Refactor `src/services/xcmService.ts` to use backend abstraction layer
+    - Remove direct blockchain connections from frontend
+    - Remove `@polkadot/api` and `@polkadot/api-contract` from frontend package.json
+    - _Requirements: 7.1, 7.2, 7.4_
+
+  - [x] 11.4 Update PAPI chain queries implementation
+    - Complete `backend/src/papi/chainQueries.ts` with all required methods
+    - Implement `mintNFT` method using PAPI transaction builder
+    - Implement `transferNFT` method for NFT transfers
+    - Add `getAccountBalance` and `getAccountNonce` methods
+    - Ensure all methods use PAPI typed descriptors and proper error handling
+    - _Requirements: 7.1, 7.3_
+
+  - [x] 11.5 Fix build and runtime issues
+    - Resolve all TypeScript compilation errors
+    - Fix dependency conflicts between PAPI and legacy packages
+    - Update test mocks to use PAPI interfaces
+    - Ensure project builds successfully with `npm run build`
+    - Verify project runs without errors with `npm run dev`
+    - _Requirements: 7.4_
+
+- [ ] 12. Create comprehensive PAPI integration documentation and tests
+  - [ ] 12.1 Write PAPI integration documentation
+    - Create `docs/PAPI_INTEGRATION.md` explaining the migration
+    - Document PAPI wallet adapter usage with code examples
+    - Explain chain query implementation patterns
+    - Add troubleshooting guide for common PAPI issues
+    - Include comparison between legacy API and PAPI approaches
+    - _Requirements: 8.1, 8.2, 8.5_
+
+  - [ ] 12.2 Create PAPI integration test suite
+    - Write integration tests for PAPI client connection
+    - Test PAPI wallet adapter with mock accounts
+    - Create tests for chain queries (NFT ownership, balance, etc.)
+    - Test NFT minting workflow end-to-end with PAPI
+    - Add tests for error handling and reconnection logic
+    - _Requirements: 8.3, 7.5_
+
+  - [ ] 12.3 Document testing procedures and setup
+    - Update `README.md` with PAPI setup instructions
+    - Document environment variables required for PAPI
+    - Create step-by-step guide for running tests
+    - Add instructions for connecting to AssetHub testnet
+    - Document how to verify PAPI integration is working
+    - _Requirements: 8.4_
+
+  - [ ] 12.4 Create PAPI usage examples and demos
+    - Create example scripts demonstrating PAPI wallet connection
+    - Add example for querying NFTs using PAPI
+    - Create example for minting NFT with PAPI
+    - Document transaction signing patterns with PAPI
+    - Add examples to project documentation
+    - _Requirements: 8.1, 8.2_
+
+- [ ] 13. Code cleanup and production readiness
+  - [x] 13.1 Remove committed build artifacts and sensitive files
+    - Remove `dist/` directories from version control
+    - Remove `.env` files from repository
+    - Add proper `.gitignore` entries for build outputs
+    - Create `.env.example` files with placeholder values
+    - Document required environment variables
+    - _Requirements: 7.4_
+
+  - [x] 13.2 Final verification and quality assurance
+    - Run full test suite and ensure all tests pass
+    - Verify no Polkadot JS API imports remain in production code
+    - Test complete minting workflow on AssetHub testnet
+    - Verify project builds and runs on clean installation
+    - Create submission checklist for grant review
+    - _Requirements: 7.1, 7.4, 7.5, 8.3_

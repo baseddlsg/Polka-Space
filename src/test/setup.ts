@@ -118,39 +118,27 @@ Object.defineProperty(window, 'injectedWeb3', {
   },
 })
 
-// Mock Polkadot extension-dapp
-vi.mock('@polkadot/extension-dapp', () => ({
-  web3Accounts: vi.fn().mockResolvedValue(TEST_CONFIG.wallet.testAccounts),
-  web3Enable: vi.fn().mockResolvedValue([
-    {
-      name: 'polkadot-js',
-      version: '0.44.1',
-    },
-  ]),
-  web3FromSource: vi.fn().mockResolvedValue({
-    signer: {
-      signPayload: vi.fn().mockResolvedValue({
-        signature: '0x' + '0'.repeat(128),
-      }),
-    },
+// Mock backend API calls for blockchain operations
+// Frontend now uses backend API instead of direct blockchain access
+vi.mock('@/services/blockchainService', () => ({
+  mintNFT: vi.fn().mockResolvedValue({
+    transactionHash: '0x' + '0'.repeat(64),
+    tokenId: '1',
+    chainId: 'assethub',
   }),
-}))
-
-// Mock Polkadot API
-vi.mock('@polkadot/api', () => ({
-  ApiPromise: {
-    create: vi.fn().mockResolvedValue({
-      isReady: Promise.resolve(true),
-      disconnect: vi.fn(),
-      query: {},
-      tx: {},
-    }),
-  },
-  WsProvider: vi.fn().mockImplementation(() => ({
-    connect: vi.fn(),
-    disconnect: vi.fn(),
-    isConnected: true,
-  })),
+  getNFTsByOwner: vi.fn().mockResolvedValue([]),
+  getNFTInfo: vi.fn().mockResolvedValue({
+    collectionId: 1,
+    itemId: 1,
+    owner: TEST_CONFIG.wallet.testAccounts[0].address,
+  }),
+  getTokenBalance: vi.fn().mockResolvedValue('1000000000000'),
+  connectToPAPI: vi.fn().mockResolvedValue({ success: true }),
+  disconnectFromPAPI: vi.fn().mockResolvedValue(undefined),
+  getChainType: vi.fn().mockReturnValue('substrate'),
+  getExplorerUrl: vi.fn().mockReturnValue('https://explorer.example.com/tx/0x123'),
+  formatAddress: vi.fn((addr) => addr?.slice(0, 6) + '...' + addr?.slice(-4)),
+  formatBalance: vi.fn((balance) => balance),
 }))
 
 // Mock Polkadot util-crypto

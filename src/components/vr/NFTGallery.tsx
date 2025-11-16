@@ -251,8 +251,8 @@ const NFTGallery = () => {
             key={chain.id}
             onClick={() => setSelectedChain(chain.id)}
             className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all ${selectedChain === chain.id
-                ? `${chain.color} text-white shadow-md`
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? `${chain.color} text-white shadow-md`
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             {chain.name}
@@ -262,8 +262,8 @@ const NFTGallery = () => {
           <button
             onClick={() => setSelectedChain('local')}
             className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all ${selectedChain === 'local'
-                ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-md'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-md'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             Local Models ({localModels.length})

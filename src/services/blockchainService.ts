@@ -1,86 +1,23 @@
-import { ApiPromise, WsProvider } from '@polkadot/api';
-import { ContractPromise } from '@polkadot/api-contract';
-import { web3FromSource } from '@polkadot/extension-dapp';
-import { ethers } from 'ethers';
-import { 
-  BLOCKCHAIN_CONFIG, 
-  SUBSTRATE_CHAINS, 
-  EVM_CHAINS,
-  NFT_CONTRACT_ABI
-} from '@/config/blockchainConfig';
-
-// Cache for API instances to avoid redundant connections
-const apiCache: Record<string, ApiPromise> = {};
-const providerCache: Record<string, ethers.JsonRpcProvider> = {};
-
 /**
- * Get a Polkadot API connection for Substrate-based chains
- * @param chainId The chain ID to connect to
- * @returns ApiPromise instance
+ * Blockchain Service - Frontend API Layer
+ * 
+ * This service provides a clean interface for blockchain operations
+ * by calling the backend PAPI service. All blockchain interactions
+ * are handled server-side for better security and performance.
  */
-export async function getPolkadotApi(chainId: string): Promise<ApiPromise> {
-  // Return from cache if available
-  if (apiCache[chainId]) {
-    const api = apiCache[chainId];
-    
-    // Check if the connection is still alive
-    if (api.isConnected) {
-      return api;
-    }
-    
-    // If disconnected, clean up and reconnect
-    await api.disconnect();
-    delete apiCache[chainId];
-  }
-  
-  // Get chain config
-  const chainConfig = BLOCKCHAIN_CONFIG[chainId];
-  if (!chainConfig) {
-    throw new Error(`Chain configuration not found for ${chainId}`);
-  }
-  
-  // Create new provider and API
-  const provider = new WsProvider(chainConfig.rpcUrl);
-  const api = await ApiPromise.create({ provider });
-  
-  // Store in cache
-  apiCache[chainId] = api;
-  
-  return api;
-}
 
-/**
- * Get an Ethereum provider for EVM-compatible chains
- * @param chainId The chain ID to connect to
- * @returns ethers.JsonRpcProvider instance
- */
-export function getEthereumProvider(chainId: string): ethers.JsonRpcProvider {
-  // Return from cache if available
-  if (providerCache[chainId]) {
-    return providerCache[chainId];
-  }
-  
-  // Get chain config
-  const chainConfig = BLOCKCHAIN_CONFIG[chainId];
-  if (!chainConfig) {
-    throw new Error(`Chain configuration not found for ${chainId}`);
-  }
-  
-  // Create new provider
-  const provider = new ethers.JsonRpcProvider(chainConfig.rpcUrl);
-  
-  // Store in cache
-  providerCache[chainId] = provider;
-  
-  return provider;
-}
+import { BLOCKCHAIN_CONFIG } from '@/config/blockchainConfig';
+
+// Backend API base URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 /**
  * Determine if a chain is Substrate-based or EVM-compatible
- * @param chainId The chain ID to check
- * @returns 'substrate' or 'evm'
  */
 export function getChainType(chainId: string): 'substrate' | 'evm' {
+  const SUBSTRATE_CHAINS = ['polkadot', 'kusama', 'westend', 'assethub', 'unique'];
+  const EVM_CHAINS = ['moonbeam', 'moonriver', 'astar', 'shiden'];
+  
   if (SUBSTRATE_CHAINS.includes(chainId)) {
     return 'substrate';
   } else if (EVM_CHAINS.includes(chainId)) {
@@ -91,65 +28,7 @@ export function getChainType(chainId: string): 'substrate' | 'evm' {
 }
 
 /**
- * Get the NFT contract for a specific chain
- * @param chainId The chain ID
- * @param account The user account for transaction signing
- * @returns Contract instance
- */
-export async function getNFTContract(
-  chainId: string, 
-  account: any
-): Promise<ContractPromise | ethers.Contract> {
-  const chainConfig = BLOCKCHAIN_CONFIG[chainId];
-  if (!chainConfig || !chainConfig.nftContractAddress) {
-    throw new Error(`NFT contract not configured for chain ${chainId}`);
-  }
-  
-  const chainType = getChainType(chainId);
-  
-  if (chainType === 'substrate') {
-    // Substrate chain - use Polkadot.js
-    const api = await getPolkadotApi(chainId);
-    
-    // Note: In a real implementation, you would need the contract ABI JSON
-    // This is a simplified example
-    const contractAbi = {} as any; // Replace with actual ABI
-    
-    return new ContractPromise(
-      api, 
-      contractAbi, 
-      chainConfig.nftContractAddress
-    );
-  } else {
-    // EVM chain - use ethers.js
-    const provider = getEthereumProvider(chainId);
-    
-    // Connect with signer if account is provided
-    if (account && account.address) {
-      // For MetaMask/EVM wallets, we would use the injected provider
-      // This is a simplified example
-      const signer = await provider.getSigner(account.address);
-      return new ethers.Contract(
-        chainConfig.nftContractAddress, 
-        NFT_CONTRACT_ABI, 
-        signer
-      );
-    }
-    
-    // Read-only mode without signer
-    return new ethers.Contract(
-      chainConfig.nftContractAddress, 
-      NFT_CONTRACT_ABI, 
-      provider
-    );
-  }
-}
-
-/**
  * Get transaction URL for explorer
- * @param chainId The chain ID
- * @param txHash Transaction hash
- * @returns Explorer URL for the transaction
  */
 export function getExplorerUrl(chainId: string, txHash: string): string {
   const chainConfig = BLOCKCHAIN_CONFIG[chainId];
@@ -167,9 +46,6 @@ export function getExplorerUrl(chainId: string, txHash: string): string {
 
 /**
  * Format an address for display
- * @param address The full address
- * @param length Number of characters to display at start and end
- * @returns Shortened address with ellipsis
  */
 export function formatAddress(address: string, length: number = 4): string {
   if (!address) return '';
@@ -179,148 +55,217 @@ export function formatAddress(address: string, length: number = 4): string {
 }
 
 /**
- * Mint an NFT on Substrate chains using Unique Network/RMRK standard
- * @param contract Contract instance
- * @param ownerAddress Owner's address
- * @param metadataUri IPFS metadata URI
- * @param account Account with signer
- * @returns Transaction result
- */
-export async function mintSubstrateNFT(
-  contract: ContractPromise,
-  ownerAddress: string,
-  metadataUri: string,
-  account: any
-): Promise<any> {
-  // Get the injector and signer from the account source
-  const injector = await web3FromSource(account.meta.source);
-  
-  // The actual function name and parameters depend on your specific contract
-  // This is a simplified example
-  const tx = await contract.tx.mintNft(
-    { gasLimit: -1 },
-    ownerAddress,
-    metadataUri
-  );
-  
-  // Sign and send the transaction
-  const txResult = await tx.signAndSend(account.address, { signer: injector.signer });
-  
-  return txResult;
-}
-
-/**
- * Mint an NFT on EVM chains using ERC-721 standard
- * @param contract Contract instance
- * @param ownerAddress Owner's address
- * @param metadataUri IPFS metadata URI
- * @returns Transaction result
- */
-export async function mintEvmNFT(
-  contract: ethers.Contract,
-  ownerAddress: string,
-  metadataUri: string
-): Promise<any> {
-  // Call the mint function - name depends on your contract
-  const tx = await contract.mintToken(ownerAddress, metadataUri);
-  
-  // Wait for transaction to be mined
-  const receipt = await tx.wait();
-  
-  return receipt;
-}
-
-/**
- * Helper function for estimating gas fees on EVM chains
- * @param chainId Chain ID
- * @param contractMethod Contract method to estimate
- * @param params Parameters for the method
- * @returns Estimated gas limit and price
- */
-export async function estimateGasFee(
-  chainId: string,
-  contractMethod: any,
-  params: any[]
-): Promise<{gasLimit: ethers.BigNumberish, gasPrice: ethers.BigNumberish}> {
-  try {
-    const provider = getEthereumProvider(chainId);
-    
-    // Estimate gas limit
-    const gasLimit = await contractMethod.estimateGas(...params);
-    
-    // Get current gas price
-    const gasPrice = await provider.getFeeData();
-    
-    return {
-      gasLimit: gasLimit,
-      gasPrice: gasPrice.gasPrice || 0
-    };
-  } catch (error) {
-    console.error('Error estimating gas fee:', error);
-    throw error;
-  }
-}
-
-/**
- * Get token balance for a user
- * @param chainId Chain ID
- * @param address User address
- * @returns Token balance with proper decimals
+ * Get token balance for a user via backend API
  */
 export async function getTokenBalance(
   chainId: string,
   address: string
 ): Promise<string> {
-  const chainConfig = BLOCKCHAIN_CONFIG[chainId];
-  if (!chainConfig) {
-    throw new Error(`Chain configuration not found for ${chainId}`);
-  }
-  
-  const chainType = getChainType(chainId);
-  
-  if (chainType === 'substrate') {
-    // Substrate chain
-    const api = await getPolkadotApi(chainId);
-    const { data: balance } = await api.query.system.account(address);
-    const free = balance.free.toString();
-    
-    // Format with correct decimals
-    return formatBalance(free, chainConfig.decimals);
-  } else {
-    // EVM chain
-    const provider = getEthereumProvider(chainId);
-    const balance = await provider.getBalance(address);
-    
-    // Format with correct decimals
-    return formatBalance(balance.toString(), chainConfig.decimals);
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/account/${address}/balance`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch balance: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.balance?.free || '0';
+  } catch (error) {
+    console.error('Error fetching token balance:', error);
+    throw error;
   }
 }
 
 /**
- * Format balance with correct decimals
- * @param balance Raw balance as string
- * @param decimals Number of decimals
- * @returns Formatted balance
+ * Mint an NFT via backend API
  */
-function formatBalance(balance: string, decimals: number): string {
-  const balanceNumber = BigInt(balance);
-  const divisor = BigInt(10) ** BigInt(decimals);
-  const wholePart = balanceNumber / divisor;
-  const fractionalPart = balanceNumber % divisor;
-  
-  // Format fractional part with leading zeros
-  let fractionalStr = fractionalPart.toString();
-  const padding = decimals - fractionalStr.length;
-  if (padding > 0) {
-    fractionalStr = '0'.repeat(padding) + fractionalStr;
+export async function mintNFT(params: {
+  ownerAddress: string;
+  metadata: any;
+  chainId?: string;
+}): Promise<{
+  transactionHash: string;
+  tokenId: string;
+  chainId: string;
+}> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/mint`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ownerAddress: params.ownerAddress,
+        metadata: params.metadata,
+        chainId: params.chainId || 'assethub',
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Minting failed: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    
+    return {
+      transactionHash: result.data.transactionHash,
+      tokenId: result.data.itemId?.toString() || '0',
+      chainId: params.chainId || 'assethub',
+    };
+  } catch (error) {
+    console.error('Error minting NFT:', error);
+    throw error;
   }
-  
-  // Trim trailing zeros
-  fractionalStr = fractionalStr.replace(/0+$/, '');
-  
-  if (fractionalStr) {
-    return `${wholePart}.${fractionalStr}`;
+}
+
+/**
+ * Get NFTs owned by an address via backend API
+ */
+export async function getNFTsByOwner(address: string): Promise<any[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/portfolio/${address}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch NFTs: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result.data?.nfts || [];
+  } catch (error) {
+    console.error('Error fetching NFTs:', error);
+    return [];
   }
-  
-  return wholePart.toString();
-} 
+}
+
+/**
+ * Get specific NFT information via backend API
+ */
+export async function getNFTInfo(
+  collectionId: number,
+  itemId: number
+): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/nft/${collectionId}/${itemId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch NFT info: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching NFT info:', error);
+    throw error;
+  }
+}
+
+/**
+ * Connect to PAPI services via backend
+ */
+export async function connectToPAPI(
+  accountAddress: string,
+  chainType: 'substrate' | 'evm' = 'substrate'
+): Promise<{
+  success: boolean;
+  accountInfo?: any;
+  supportedChains?: string[];
+}> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/papi/connect`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        account: accountAddress,
+        chainType,
+      }),
+    });
+
+    if (!response.ok) {
+      return { success: false };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error connecting to PAPI:', error);
+    return { success: false };
+  }
+}
+
+/**
+ * Disconnect from PAPI services
+ */
+export async function disconnectFromPAPI(): Promise<void> {
+  try {
+    await fetch(`${API_BASE_URL}/api/papi/disconnect`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error) {
+    console.error('Error disconnecting from PAPI:', error);
+  }
+}
+
+/**
+ * Helper function for estimating gas fees (placeholder for future implementation)
+ */
+export async function estimateGasFee(
+  chainId: string,
+  operation: string
+): Promise<{ gasLimit: string; gasPrice: string }> {
+  // This would call a backend endpoint in a real implementation
+  console.warn('Gas estimation not yet implemented');
+  return {
+    gasLimit: '0',
+    gasPrice: '0',
+  };
+}
+
+/**
+ * Format balance with correct decimals
+ */
+export function formatBalance(balance: string, decimals: number = 12): string {
+  try {
+    const balanceNumber = BigInt(balance);
+    const divisor = BigInt(10) ** BigInt(decimals);
+    const wholePart = balanceNumber / divisor;
+    const fractionalPart = balanceNumber % divisor;
+    
+    // Format fractional part with leading zeros
+    let fractionalStr = fractionalPart.toString();
+    const padding = decimals - fractionalStr.length;
+    if (padding > 0) {
+      fractionalStr = '0'.repeat(padding) + fractionalStr;
+    }
+    
+    // Trim trailing zeros
+    fractionalStr = fractionalStr.replace(/0+$/, '');
+    
+    if (fractionalStr) {
+      return `${wholePart}.${fractionalStr}`;
+    }
+    
+    return wholePart.toString();
+  } catch (error) {
+    console.error('Error formatting balance:', error);
+    return '0';
+  }
+}
