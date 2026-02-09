@@ -1,17 +1,6 @@
 import request from 'supertest';
 import express from 'express';
 import { nftCache, portfolioCache, communityCache, cacheKeys } from '../services/cacheService';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { beforeEach } from 'node:test';
-import { describe } from 'node:test';
 
 // Mock the cache services for testing
 jest.mock('../services/cacheService', () => ({

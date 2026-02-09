@@ -4,6 +4,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { Button } from '@/components/ui/button';
 import { Coins, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { mintNFT } from '@/services/mintingService';
 
 interface MintButtonProps {
   position?: [number, number, number];
@@ -42,20 +43,21 @@ const MintButton: React.FC<MintButtonProps> = ({
     onMintStart?.();
 
     try {
-      // Simulate minting process
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      const mockResult = {
-        tokenId: Math.floor(Math.random() * 1000000).toString(),
-        transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
-        chainId: 'unique'
-      };
+      const result = await mintNFT({
+        ownerAddress: selectedAccount.address,
+        objectDetails: {
+          ...objectDetails,
+          name: objectDetails.name || 'Unnamed Object',
+        },
+        chainId: 'assethub',
+        account: selectedAccount,
+      });
 
       setMintingStatus('success');
-      onMintSuccess?.(mockResult);
-      
+      onMintSuccess?.(result);
+
       toast.success('NFT minted successfully!', {
-        description: `Token ID: ${mockResult.tokenId}`
+        description: `Token ID: ${result.tokenId}`
       });
 
       // Reset status after 3 seconds

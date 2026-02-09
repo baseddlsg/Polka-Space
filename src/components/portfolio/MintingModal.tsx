@@ -297,7 +297,6 @@ const MintingModal: React.FC<MintingModalProps> = ({
       attributes: []
     });
     setMintingProgress(0);
-    setCurrentStep('');
     setValidationErrors({});
     setPreviewMode(false);
     setMintingSteps(prev => prev.map(step => ({ ...step, status: 'pending' })));

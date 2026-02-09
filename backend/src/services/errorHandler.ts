@@ -196,11 +196,11 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction): 
   });
 
   // Override res.end to log when response is sent
-  const originalEnd = res.end;
-  res.end = function(chunk?: any, encoding?: any) {
+  const originalEnd = res.end.bind(res);
+  (res as any).end = function(chunk?: any, encoding?: any) {
     const duration = Date.now() - startTime;
     logger.logRequest(req, res, duration);
-    originalEnd.call(this, chunk, encoding);
+    return originalEnd(chunk, encoding);
   };
 
   next();

@@ -31,7 +31,7 @@ The application consists of:
 1. React.js frontend with Three.js for 3D rendering
 2. Smart Contracts in ink! (Substrate) and Solidity (EVM)
 3. IPFS integration for decentralized storage of 3D models and metadata
-4. Blockchain integration via Polkadot.js API and ethers.js
+4. Blockchain integration via PAPI (Polkadot API) and ethers.js
 
 ## Problems Solved
 
@@ -61,7 +61,7 @@ Our project leverages Polkadot's unique architecture in several ways:
 
 ### SDKs and Tools Used
 
-- **Polkadot.js API**: For interacting with Substrate-based chains
+- **PAPI (Polkadot API)**: For interacting with Substrate-based chains (migrated from Polkadot.js API)
 - **ink!**: For developing Substrate-based smart contracts
 - **React Three Fiber**: For 3D rendering in our web-based VR environment
 - **XCM SDK**: For implementing cross-chain messaging
@@ -235,23 +235,64 @@ To deploy the smart contract to Polkadot Asset Hub or alternative networks, foll
 ## Getting Started
 
 ### Prerequisites
-- Node.js (v16+)
-- Rust and Cargo (for ink! contract development)
-- Substrate Contract Node (for local testing)
+- Node.js v18+
+- npm
+- (Optional) Rust and Cargo for smart contract development
 
-### Installation
+### Frontend Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/vr-genesis-frame.git
-cd vr-genesis-frame
-
-# Install dependencies
+# Install frontend dependencies
 npm install
 
-# Run the development server
+# Copy environment config
+cp .env.example .env
+
+# Start the frontend dev server (Vite)
 npm run dev
 ```
+
+The frontend runs at http://localhost:5173 by default.
+
+### Backend Setup
+
+```bash
+cd backend
+
+# Install backend dependencies
+npm install
+
+# Copy environment config
+cp .env.example .env
+```
+
+Edit `backend/.env` with your configuration:
+- `ASSETHUB_ENDPOINT_URL` - WebSocket endpoint for Asset Hub (e.g., `wss://westmint-rpc.polkadot.io` for testnet)
+- `SERVER_ACCOUNT_SEED` - Seed phrase for the server signing account (e.g., `//Alice` for development)
+- `NFT_COLLECTION_ID` - The NFT collection ID on-chain (must already exist)
+- `PORT` - Backend server port (defaults to 3001)
+
+```bash
+# Start the backend dev server
+npm run dev
+```
+
+The backend API runs at http://localhost:3001.
+
+### Running Tests
+
+```bash
+# Frontend tests (Vitest)
+npm test
+
+# Backend tests (Jest)
+cd backend
+npm test
+```
+
+### Environment Variables Reference
+
+See `/.env.example` for frontend variables and `/backend/.env.example` for backend variables.
 
 ### Smart Contract Development
 

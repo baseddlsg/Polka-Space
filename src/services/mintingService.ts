@@ -102,30 +102,9 @@ export async function mintNFT(request: MintRequest): Promise<MintResponse> {
  */
 export async function fetchUserNFTs(address: string): Promise<any[]> {
   console.log(`Fetching NFTs for address: ${address}`);
-  
+
   try {
-    // Fetch NFTs from backend API
     const nfts = await getNFTsByOwner(address);
-    
-    // If no NFTs found, return mock data for demonstration
-    if (nfts.length === 0) {
-      console.log('No NFTs found, returning mock data for demonstration');
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      return Array.from({length: 6}, (_, i) => ({
-        id: `nft-${i+1}`,
-        name: ['Designer Chair', 'Modern Sculpture', 'Yellow Duck', 
-               'Plant Collection', 'Luxury Table', 'Modern Lamp'][i],
-        image: `https://ui-avatars.com/api/?name=${encodeURIComponent(['chair','sculpture','duck','plant','table','lamp'][i])}-nft&background=6D28D9&color=fff`,
-        chain: ['unique', 'astar', 'moonbeam', 'unique', 'astar', 'moonbeam'][i],
-        modelUrl: ['/models/simple_chair.glb', '/models/abstract_sculpture_1.glb', 
-                  '/models/rubber_duck.glb', '/models/potted_plant.glb',
-                  '/models/small_table.glb', '/models/lamp.glb'][i],
-        tokenId: Math.floor(Math.random() * 1000000).toString(),
-        dateCreated: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
-      }));
-    }
-    
     return nfts;
   } catch (error) {
     console.error("Error fetching NFTs:", error);

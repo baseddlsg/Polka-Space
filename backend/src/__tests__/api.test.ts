@@ -56,15 +56,17 @@ function createTestApp() {
       const mintRequest: MintRequest = req.body;
       
       if (!mintRequest.ownerAddress || !mintRequest.metadata) {
-        return res.status(400).json({ 
-          error: 'Missing required fields: ownerAddress and metadata' 
+        res.status(400).json({
+          error: 'Missing required fields: ownerAddress and metadata'
         });
+        return;
       }
 
       if (!mockPAPIService.validateAddress(mintRequest.ownerAddress)) {
-        return res.status(400).json({ 
-          error: 'Invalid owner address format' 
+        res.status(400).json({
+          error: 'Invalid owner address format'
         });
+        return;
       }
 
       const processedMetadata = await metadataProcessor.processMetadata(mintRequest.metadata);
@@ -107,9 +109,10 @@ function createTestApp() {
       const { address } = req.params;
       
       if (!mockPAPIService.validateAddress(address)) {
-        return res.status(400).json({ 
-          error: 'Invalid address format' 
+        res.status(400).json({
+          error: 'Invalid address format'
         });
+        return;
       }
 
       const nfts = await mockPAPIService.getNFTsByOwner(address);

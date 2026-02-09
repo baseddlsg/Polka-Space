@@ -6,6 +6,7 @@ export class TransactionManager {
   private transactions: Map<string, MintTransaction> = new Map();
   private transactionsByAddress: Map<string, string[]> = new Map();
   private logger: Logger;
+  private pollingInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     this.logger = Logger.getInstance();
@@ -202,7 +203,9 @@ export class TransactionManager {
    * Start background polling for transaction status updates
    */
   startStatusPolling(intervalMs: number = 30000): void {
-    setInterval(async () => {
+    this.stopStatusPolling();
+
+    this.pollingInterval = setInterval(async () => {
       try {
         await this.pollPendingTransactions();
       } catch (error) {
@@ -214,32 +217,36 @@ export class TransactionManager {
   }
 
   /**
+   * Stop background polling for transaction status updates
+   */
+  stopStatusPolling(): void {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+      console.log('Stopped transaction status polling');
+    }
+  }
+
+  /**
    * Poll pending transactions for status updates
    */
   private async pollPendingTransactions(): Promise<void> {
     const pendingTransactions = await this.getPendingTransactions();
-    
+
     if (pendingTransactions.length === 0) {
       return;
     }
 
-    console.log(`Polling ${pendingTransactions.length} pending transactions`);
+    this.logger.debug(`Polling ${pendingTransactions.length} pending transactions`);
 
     for (const transaction of pendingTransactions) {
       try {
-        // In a real implementation, you would check the blockchain for transaction status
-        // For now, we'll simulate status updates based on age
         const age = Date.now() - transaction.createdAt;
-        
-        if (transaction.status === 'pending' && age > 5000) {
-          // After 5 seconds, mark as processing
-          await this.updateTransaction(transaction.id, { status: 'processing' });
-        } else if (transaction.status === 'processing' && age > 30000) {
-          // After 30 seconds, mark as completed (in real implementation, check blockchain)
-          await this.updateTransaction(transaction.id, { 
-            status: 'completed',
-            transactionHash: `0x${Math.random().toString(16).substr(2, 64)}`
-          });
+
+        // Mark transactions as failed if stuck for more than 5 minutes
+        if (age > 300000) {
+          this.logger.warn('Transaction appears stuck', { transactionId: transaction.id, ageMs: age });
+          await this.markTransactionFailed(transaction.id, 'Transaction timed out after 5 minutes');
         }
       } catch (error) {
         console.error(`Error polling transaction ${transaction.id}:`, error);

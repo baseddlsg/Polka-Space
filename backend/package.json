@@ -14,9 +14,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@polkadot-api/descriptors": "^0.0.1",
-    "@polkadot-api/signer": "^0.2.10",
-    "@polkadot-api/substrate-client": "^0.4.7",
     "@polkadot-api/ws-provider": "^0.7.0",
     "@polkadot/keyring": "^13.4.4",
     "@polkadot/util-crypto": "^13.4.4",

@@ -104,13 +104,13 @@ describe('Full Workflow E2E Tests', () => {
       const responses = await Promise.all(mintPromises);
 
       // Both should succeed
-      responses.forEach(response => {
+      responses.forEach((response: any) => {
         expect(response.status).toBe(201);
         expect(response.body).toHaveProperty('transactionId');
       });
 
       // Wait for both to complete
-      await Promise.all(responses.map(async (response) => {
+      await Promise.all(responses.map(async (response: any) => {
         let status = 'pending';
         let attempts = 0;
         
@@ -350,7 +350,7 @@ describe('Full Workflow E2E Tests', () => {
       const totalTime = endTime - startTime;
 
       // All requests should succeed
-      responses.forEach(response => {
+      responses.forEach((response: any) => {
         expect(response.status).toBe(200);
       });
 

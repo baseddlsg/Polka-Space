@@ -1,112 +1,148 @@
-import { ApiPromise, WsProvider, Keyring } from '@polkadot/api';
-import { KeyringPair } from '@polkadot/keyring/types';
-// PAPI integration will be added in future iterations
+import { getAssetHubClient, PAPIClient } from './papi/papiClient';
+import { WalletAdapter } from './papi/walletAdapter';
+import { ChainQueries } from './papi/chainQueries';
 import dotenv from 'dotenv';
 
-dotenv.config(); // Ensure environment variables are loaded
+dotenv.config();
 
-let api: ApiPromise | null = null;
-let serverAccount: KeyringPair | null = null;
+let papiClient: PAPIClient | null = null;
+let walletAdapter: WalletAdapter | null = null;
+let chainQueries: ChainQueries | null = null;
 
 /**
- * Initializes the Polkadot API connection and loads the server account.
- * If already initialized, returns the existing API instance.
+ * Initializes the PAPI client connection and loads the server account.
+ * If already initialized, returns the existing client instance.
  */
-export async function initializeApi(): Promise<ApiPromise> {
-  if (api) {
-    return api;
+export async function initializeApi(): Promise<PAPIClient> {
+  if (papiClient && papiClient.isClientConnected()) {
+    return papiClient;
   }
-
-  const endpoint = process.env.STATEMINT_ENDPOINT_URL;
-  if (!endpoint) {
-    throw new Error('STATEMINT_ENDPOINT_URL is not defined in .env file');
-  }
-
-  const provider = new WsProvider(endpoint);
-  console.log(`Connecting to Statemint/Westmint node at ${endpoint}...`);
 
   try {
-    api = await ApiPromise.create({ provider });
+    console.log('Initializing PAPI client...');
+    
+    // Get AssetHub PAPI client
+    papiClient = await getAssetHubClient();
+    
+    // Initialize wallet adapter
+    walletAdapter = new WalletAdapter(papiClient);
+    await walletAdapter.initialize();
+    
+    // Initialize chain queries
+    chainQueries = new ChainQueries(papiClient);
+    
+    const serverAccount = walletAdapter.getServerAccount();
+    console.log('PAPI client connected and server account loaded:', serverAccount.address);
 
-    await api.isReady;
-    console.log('API connected and ready.');
-
-    const serverSeed = process.env.SERVER_ACCOUNT_SEED;
-    if (!serverSeed) {
-      throw new Error('SERVER_ACCOUNT_SEED is not defined in .env file');
-    }
-
-    const keyring = new Keyring({ type: 'sr25519' });
-    serverAccount = keyring.addFromUri(serverSeed);
-    console.log('Server account loaded:', serverAccount.address);
-
-    return api;
+    return papiClient;
   } catch (error) {
-    console.error('Failed to initialize Polkadot API:', error);
-    api = null; // Reset api instance on failure
-    serverAccount = null;
-    throw error; // Re-throw the error after logging
+    console.error('Failed to initialize PAPI client:', error);
+    papiClient = null;
+    walletAdapter = null;
+    chainQueries = null;
+    throw error;
   }
+}
+
+/**
+ * Get the wallet adapter instance
+ */
+export function getWalletAdapter(): WalletAdapter {
+  if (!walletAdapter) {
+    throw new Error('Wallet adapter not initialized. Call initializeApi() first.');
+  }
+  return walletAdapter;
+}
+
+/**
+ * Get the chain queries instance
+ */
+export function getChainQueries(): ChainQueries {
+  if (!chainQueries) {
+    throw new Error('Chain queries not initialized. Call initializeApi() first.');
+  }
+  return chainQueries;
 }
 
 /**
  * Finds the next available itemId for the given collection by incrementing from 0
  * until an unused ID is found. This is simple and safe for small collections.
  */
-async function getNextAvailableItemId(api: ApiPromise, collectionId: number): Promise<number> {
-  let itemId = 0;
-  while (true) {
-    const item = await api.query.nfts.item(collectionId, itemId);
-    // Check for Option type (isNone), or fallback to .isEmpty or null
-    if ((item as any).isNone || (item as any).isEmpty || item === null) {
-      return itemId;
-    }
-    itemId++;
-    if (itemId > 2 ** 32 - 1) throw new Error('No available itemId found');
-  }
+async function getNextAvailableItemId(collectionId: number): Promise<number> {
+  const queries = getChainQueries();
+  return await queries.getNextAvailableItemId(collectionId);
 }
 
 /**
- * Mints an NFT using the new PAPI integration layer.
- * Falls back to legacy API if PAPI is not available.
+ * Mints an NFT using PAPI integration.
  * 
  * @param ownerAddress The address of the intended owner of the new NFT.
  * @param metadata Optional metadata for the NFT.
  * @returns The transaction hash of the minting operation.
  */
-export async function mintNft(ownerAddress: string, metadata?: any): Promise<{ txHash: string, collectionId: number, itemId: number }> {
+export async function mintNft(
+  ownerAddress: string, 
+  metadata?: any
+): Promise<{ txHash: string; collectionId: number; itemId: number }> {
   console.log(`Attempting to mint NFT for owner: ${ownerAddress}`);
   
   try {
-    // PAPI integration placeholder - will be implemented in future iterations
-    console.log('Using legacy Polkadot.js API for minting');
+    // Ensure PAPI is initialized
+    await initializeApi();
     
-    const currentApi = await initializeApi(); // Ensure API is connected
-    if (!serverAccount) {
-      throw new Error('Server account not initialized. Make sure initializeApi() was called successfully.');
-    }
+    const wallet = getWalletAdapter();
+    const queries = getChainQueries();
+    
+    const serverAccount = wallet.getServerAccount();
+    
     const collectionIdStr = process.env.NFT_COLLECTION_ID;
     if (!collectionIdStr) {
       throw new Error('NFT_COLLECTION_ID is not defined in .env file');
     }
+    
     const collectionId = parseInt(collectionIdStr, 10);
     if (isNaN(collectionId)) {
       throw new Error('Invalid NFT_COLLECTION_ID in .env file');
     }
-    // Use the helper to get the next available itemId
-    const itemId = await getNextAvailableItemId(currentApi, collectionId);
-    console.log(`Minting NFT: Collection=${collectionId}, Item=${itemId}, Owner=${ownerAddress}`);
-    const tx = currentApi.tx.nfts.mint(
+    
+    // Get the next available itemId using PAPI
+    const itemId = await getNextAvailableItemId(collectionId);
+    
+    console.log(`Minting NFT via PAPI: Collection=${collectionId}, Item=${itemId}, Owner=${ownerAddress}`);
+    
+    // Mint the NFT using PAPI chain queries
+    const result = await queries.mintNFT({
       collectionId,
       itemId,
-      ownerAddress,
-      null // Add null for the potentially missing 4th argument (itemConfig)
-    );
-    console.log('Signing and sending mint transaction...');
-    const hash = await tx.signAndSend(serverAccount);
-    const txHashHex = hash.toHex();
-    console.log('Mint transaction sent with hash:', txHashHex);
-    return { txHash: txHashHex, collectionId, itemId };
+      owner: ownerAddress,
+      metadata: metadata ? JSON.stringify(metadata) : '',
+      signer: serverAccount
+    });
+    
+    console.log('Mint transaction sent via PAPI with hash:', result.txHash);
+    
+    // If metadata is provided, set it in a separate transaction
+    if (metadata) {
+      try {
+        const metadataStr = typeof metadata === 'string' ? metadata : JSON.stringify(metadata);
+        await queries.setNFTMetadata({
+          collectionId,
+          itemId,
+          metadata: metadataStr,
+          signer: serverAccount
+        });
+        console.log('NFT metadata set successfully');
+      } catch (metadataError) {
+        console.warn('Failed to set NFT metadata, but mint succeeded:', metadataError);
+        // Don't fail the whole operation if metadata setting fails
+      }
+    }
+    
+    return { 
+      txHash: result.txHash, 
+      collectionId, 
+      itemId: result.itemId 
+    };
   } catch (error) {
     console.error('Minting failed:', error);
     if (error instanceof Error) {
@@ -115,4 +151,97 @@ export async function mintNft(ownerAddress: string, metadata?: any): Promise<{ t
       throw new Error('Minting failed due to an unknown error.');
     }
   }
-} 
+}
+
+/**
+ * Get NFT information using PAPI
+ */
+export async function getNFTInfo(
+  collectionId: number, 
+  itemId: number
+): Promise<any> {
+  try {
+    await initializeApi();
+    const queries = getChainQueries();
+    
+    return await queries.getNFTItem(collectionId, itemId);
+  } catch (error) {
+    console.error(`Failed to get NFT info for ${collectionId}:${itemId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Get all NFTs owned by an address using PAPI
+ */
+export async function getNFTsByOwner(ownerAddress: string): Promise<any[]> {
+  try {
+    await initializeApi();
+    const queries = getChainQueries();
+    
+    return await queries.getNFTsByOwner(ownerAddress);
+  } catch (error) {
+    console.error(`Failed to get NFTs for owner ${ownerAddress}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Get account balance using PAPI
+ */
+export async function getAccountBalance(address: string): Promise<{
+  free: string;
+  reserved: string;
+  frozen: string;
+}> {
+  try {
+    await initializeApi();
+    const queries = getChainQueries();
+    
+    return await queries.getAccountBalance(address);
+  } catch (error) {
+    console.error(`Failed to get balance for ${address}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Transfer an NFT using PAPI
+ */
+export async function transferNFT(
+  fromAddress: string,
+  toAddress: string,
+  collectionId: number,
+  itemId: number
+): Promise<{ txHash: string }> {
+  try {
+    await initializeApi();
+    const wallet = getWalletAdapter();
+    const queries = getChainQueries();
+    
+    const serverAccount = wallet.getServerAccount();
+    
+    return await queries.transferNFT({
+      fromAddress,
+      toAddress,
+      collectionId,
+      itemId,
+      signer: serverAccount
+    });
+  } catch (error) {
+    console.error('Transfer failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Cleanup PAPI connections
+ */
+export async function cleanup(): Promise<void> {
+  if (papiClient) {
+    await papiClient.disconnect();
+    papiClient = null;
+    walletAdapter = null;
+    chainQueries = null;
+  }
+}

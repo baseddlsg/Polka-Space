@@ -114,18 +114,19 @@ export class RateLimiter {
       });
 
       // Override res.end to handle skipSuccessfulRequests and skipFailedRequests
-      const originalEnd = res.end;
-      res.end = function(chunk?: any, encoding?: any) {
-        const shouldSkip = 
-          (res.statusCode < 400 && this.config.skipSuccessfulRequests) ||
-          (res.statusCode >= 400 && this.config.skipFailedRequests);
+      const originalEnd = res.end.bind(res);
+      const config = this.config;
+      (res as any).end = function(chunk?: any, encoding?: any) {
+        const shouldSkip =
+          (res.statusCode < 400 && config.skipSuccessfulRequests) ||
+          (res.statusCode >= 400 && config.skipFailedRequests);
 
         if (shouldSkip) {
           record.count--;
         }
 
-        originalEnd.call(this, chunk, encoding);
-      }.bind(this);
+        return originalEnd(chunk, encoding);
+      };
 
       next();
     };

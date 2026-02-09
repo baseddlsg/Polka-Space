@@ -25,7 +25,7 @@ import analyticsRoutes from './routes/analytics';
 // Load environment variables from .env file
 dotenv.config();
 
-const app = express();
+export const app = express();
 const port = process.env.PORT || 3001;
 
 // Initialize logger and error handlers
@@ -53,17 +53,29 @@ const notificationService = new NotificationService();
 // Initialize PAPI service and polkadot service
 let papiService: any = null;
 
-// Initialize both services
-Promise.all([
-  initializePAPIService(),
-  polkadotService.initializeApi()
-]).then(([papi, _]) => {
-  papiService = papi;
-  console.log('PAPI Service and Polkadot Service initialized successfully');
-}).catch(error => {
-  console.error('Failed to initialize services:', error);
-  console.error('Server will continue but blockchain operations may fail');
-});
+// Validate required environment variables
+const requiredEnvVars = ['SERVER_ACCOUNT_SEED', 'ASSETHUB_ENDPOINT_URL'];
+const missingEnvVars = requiredEnvVars.filter(v => !process.env[v]);
+if (missingEnvVars.length > 0) {
+  console.warn(`WARNING: Missing environment variables: ${missingEnvVars.join(', ')}`);
+  console.warn('Blockchain operations will be unavailable. Copy .env.example to .env and configure.');
+}
+
+// Only initialize blockchain services if env vars are present
+if (process.env.SERVER_ACCOUNT_SEED && process.env.ASSETHUB_ENDPOINT_URL) {
+  Promise.all([
+    initializePAPIService(),
+    polkadotService.initializeApi()
+  ]).then(([papi, _]) => {
+    papiService = papi;
+    console.log('PAPI Service and Polkadot Service initialized successfully');
+  }).catch(error => {
+    console.error('Failed to initialize services:', error);
+    console.error('Server will continue but blockchain operations may fail');
+  });
+} else {
+  console.warn('Skipping blockchain initialization due to missing environment variables');
+}
 
 // --- Routes ---
 app.use('/api/analytics', analyticsRoutes);
@@ -457,13 +469,35 @@ app.use(notFoundHandler);
 // Global error handling middleware
 app.use(errorHandler);
 
+// --- Graceful Shutdown ---
+function gracefulShutdown(signal: string) {
+  console.log(`\nReceived ${signal}. Shutting down gracefully...`);
+
+  rateLimiters.destroy();
+  transactionManager.stopStatusPolling();
+
+  polkadotService.cleanup().catch(err => {
+    console.error('Error during polkadot service cleanup:', err);
+  });
+
+  setTimeout(() => {
+    console.log('Shutdown complete.');
+    process.exit(0);
+  }, 2000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 // --- Server Start ---
-app.listen(port, () => {
-  console.log(`NFT Minting Service listening at http://localhost:${port}`);
-  console.log('Available endpoints:');
-  console.log('  POST /mint - Mint new NFT');
-  console.log('  GET /portfolio/:address - Get user portfolio');
-  console.log('  GET /community - Get community feed');
-  console.log('  GET /transaction/:id - Get transaction status');
-  console.log('  GET /nft/:collectionId/:itemId - Get NFT info');
-}); 
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`NFT Minting Service listening at http://localhost:${port}`);
+    console.log('Available endpoints:');
+    console.log('  POST /mint - Mint new NFT');
+    console.log('  GET /portfolio/:address - Get user portfolio');
+    console.log('  GET /community - Get community feed');
+    console.log('  GET /transaction/:id - Get transaction status');
+    console.log('  GET /nft/:collectionId/:itemId - Get NFT info');
+  });
+}

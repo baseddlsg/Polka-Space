@@ -36,7 +36,7 @@ export class TestHelpers {
         token: response.body.token,
         account,
         request: (method: string, path: string) => 
-          request(this.app)[method as keyof typeof request](path)
+          (request(this.app) as any)[method](path)
             .set('Authorization', `Bearer ${response.body.token}`)
       }));
   }
@@ -117,7 +117,7 @@ export class TestHelpers {
   async measureResponseTime(method: string, path: string, expectedStatus = 200) {
     const startTime = Date.now();
     
-    const response = await request(this.app)[method as keyof typeof request](path)
+    const response = await (request(this.app) as any)[method](path)
       .expect(expectedStatus);
     
     const endTime = Date.now();
